@@ -15,6 +15,13 @@ internal static class AppInfo
         Assembly.GetExecutingAssembly().GetCustomAttributes<AssemblyMetadataAttribute>()
             .FirstOrDefault(x => x.Key == "UpdateRepositoryUrl")?.Value ?? string.Empty;
 
+    /// <summary>
+    /// Where updates come from: normally <see cref="RepositoryUrl"/>. MICSWITCH_UPDATE_SOURCE names a folder
+    /// or URL holding releases instead (used for testing).
+    /// </summary>
+    public static string UpdateSource { get; } =
+        Environment.GetEnvironmentVariable("MICSWITCH_UPDATE_SOURCE") is { Length: > 0 } custom ? custom : RepositoryUrl;
+
     public const string UpstreamUrl = "https://github.com/iXab3r/MicSwitch";
 
     public static string Version { get; } =

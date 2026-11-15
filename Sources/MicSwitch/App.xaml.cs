@@ -88,6 +88,7 @@ public partial class App
             .AddSingleton<SpeakerHotkeysViewModel>()
             .AddSingleton<SpeakerSoundsViewModel>()
             .AddSingleton<SpeakerOverlayViewModel>()
+            .AddSingleton<UpdatesViewModel>()
             .AddSingleton<GeneralViewModel>()
             .AddSingleton<HotkeysPage>()
             .AddSingleton<SoundsPage>()
@@ -110,7 +111,7 @@ public partial class App
         // WPF makes the first window the application's main window, and the theme code then gives that
         // window the settings window's backdrop: a solid square behind the overlay icon.
         MainWindow = null;
-        tray = new TrayIconService(state, engine.Microphone, ShowMainWindow, ExitApp);
+        tray = new TrayIconService(state, engine.Microphone, updates, ShowMainWindow, ExitApp);
 
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
         SystemEvents.SessionSwitch += OnSessionSwitch;

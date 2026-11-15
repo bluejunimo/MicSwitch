@@ -34,6 +34,44 @@
             <!-- Stays in place while the page below it scrolls. -->
             <ui:NavigationView.Header>
                 <StackPanel x:Name="Header" Margin="32,8,32,4">
+                    <!-- A new version is waiting: one click installs it. -->
+                    <ui:Card x:Name="UpdateBanner"
+                             Margin="0,0,0,10"
+                             Padding="14,8,8,8"
+                             Visibility="{Binding IsBannerOpen, Converter={StaticResource VisibleWhenTrue}}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:SymbolIcon Margin="0,0,12,0"
+                                           FontSize="20"
+                                           Foreground="{DynamicResource SystemAccentColorSecondaryBrush}"
+                                           Symbol="ArrowCircleDown24" />
+                            <ui:TextBlock Grid.Column="1"
+                                          VerticalAlignment="Center"
+                                          FontTypography="BodyStrong"
+                                          Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                          Text="{Binding BannerTitle}"
+                                          TextTrimming="CharacterEllipsis" />
+                            <ui:Button Grid.Column="2"
+                                       Appearance="Primary"
+                                       Command="{Binding ActCommand}"
+                                       Content="{Binding ActionText}"
+                                       IsEnabled="{Binding CanAct}" />
+                            <ui:Button Grid.Column="3"
+                                       Margin="4,0,0,0"
+                                       Padding="6"
+                                       Appearance="Transparent"
+                                       AutomationProperties.Name="Not now"
+                                       BorderThickness="0"
+                                       Command="{Binding DismissBannerCommand}"
+                                       Icon="{ui:SymbolIcon Dismiss16}"
+                                       ToolTip="Not now" />
+                        </Grid>
+                    </ui:Card>
                     <StackPanel Margin="0,0,0,14" Orientation="Horizontal">
                         <ui:TextBlock x:Name="SectionTitle"
                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"

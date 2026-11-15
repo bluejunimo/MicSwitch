@@ -12,15 +12,19 @@ internal sealed class TrayIconService : IDisposable
     private readonly AppState state;
     private readonly TaskbarIcon tray;
     private readonly MenuItem muteItem;
+    private readonly MenuItem updateItem;
+    private readonly UpdateService updates;
+    private string? announcedVersion;
     private readonly System.Windows.Threading.Dispatcher dispatcher;
 
     // One icon per look, made once and reused, so toggling mute creates nothing.
     private readonly Dictionary<(MicVisual Visual, bool Light), NativeIcon> icons = [];
     private string iconSource = string.Empty;
 
-    public TrayIconService(AppState state, DeviceController microphone, Action showWindow, Action exit)
+    public TrayIconService(AppState state, DeviceController microphone, UpdateService updates, Action showWindow, Action exit)
     {
         this.state = state;
+        this.updates = updates;
         dispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
 
         muteItem = new MenuItem();
@@ -29,10 +33,12 @@ internal sealed class TrayIconService : IDisposable
         openItem.Click += (_, _) => showWindow();
         var exitItem = new MenuItem { Header = "Exit" };
         exitItem.Click += (_, _) => exit();
+        updateItem = new MenuItem { Visibility = System.Windows.Visibility.Collapsed };
+        updateItem.Click += (_, _) => _ = updates.InstallAsync();
 
         tray = new TaskbarIcon
         {
-            ContextMenu = new ContextMenu { Items = { muteItem, openItem, new Separator(), exitItem } },
+            ContextMenu = new ContextMenu { Items = { muteItem, openItem, updateItem, new Separator(), exitItem } },
             NoLeftClickDelay = true,
             LeftClickCommand = new RelayCommand(microphone.ToggleMute),
             DoubleClickCommand = new RelayCommand(showWindow)
@@ -41,6 +47,8 @@ internal sealed class TrayIconService : IDisposable
         state.MicrophoneChanged += Update;
         state.SettingsChanged += Update;
         SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
+        updates.StatusChanged += OnUpdateStatusChanged;
+        tray.TrayBalloonTipClicked += (_, _) => _ = updates.InstallAsync();
 
         // Windows keeps the tooltip an icon is created with as its name (screen readers announce it
         // before the current tooltip), so the icon is created as "MicSwitch" and given its status after.
@@ -55,8 +63,35 @@ internal sealed class TrayIconService : IDisposable
         SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
         state.MicrophoneChanged -= Update;
         state.SettingsChanged -= Update;
+        updates.StatusChanged -= OnUpdateStatusChanged;
         tray.Dispose();
         ClearIcons();
+    }
+
+    private void OnUpdateStatusChanged() => dispatcher.BeginInvoke(ShowUpdate);
+
+    // MicSwitch mostly lives in the tray, so that is where a waiting update is announced: once, as a
+    // notification that installs it when clicked, and for as long as it waits in the menu.
+    private void ShowUpdate()
+    {
+        var ready = updates.Status == UpdateStatus.ReadyToRestart;
+        updateItem.Visibility = ready ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+        updateItem.Header = $"Restart to update to {updates.NewVersion}";
+        if (ready && updates.FoundInBackground && announcedVersion != updates.NewVersion)
+        {
+            announcedVersion = updates.NewVersion;
+            try
+            {
+                tray.ShowNotification(
+                    $"MicSwitch {updates.NewVersion} is ready",
+                    "Click here to restart MicSwitch and install it. Otherwise it is installed the next time MicSwitch starts.",
+                    H.NotifyIcon.Core.NotificationIcon.Info);
+            }
+            catch (Exception ex)
+            {
+                Log.Debug(ex, "Could not show the update notification");
+            }
+        }
     }
 
     private void OnUserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e) => dispatcher.BeginInvoke(Update);

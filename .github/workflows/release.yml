@@ -40,7 +40,8 @@ jobs:
           # Earlier releases are needed to build delta updates; there are none the first time.
           vpk download github --repoUrl $env:REPO_URL --token "${{ secrets.GITHUB_TOKEN }}"
           if ($LASTEXITCODE -ne 0) { Write-Host "No earlier release found"; $global:LASTEXITCODE = 0 }
-          vpk pack --packId MicSwitch --packVersion $env:VERSION --packDir publish --mainExe MicSwitch.exe `
+          # Not "MicSwitch": version 1.x is installed under that name, and the two must not share a folder.
+          vpk pack --packId MicSwitch2 --packVersion $env:VERSION --packDir publish --mainExe MicSwitch.exe `
             --packTitle MicSwitch --icon Sources/MicSwitch/Resources/microphoneEnabled.ico
 
       - name: Upload

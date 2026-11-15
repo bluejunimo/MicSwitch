@@ -12,7 +12,6 @@ internal sealed partial class GeneralViewModel : ObservableObject
     private readonly AppState state;
     private readonly SettingsStore settings;
     private readonly StartupService startup;
-    private readonly UpdateService updates;
     private readonly AppLifetime lifetime;
     private bool syncing;
 
@@ -52,31 +51,20 @@ internal sealed partial class GeneralViewModel : ObservableObject
     [ObservableProperty]
     private bool restoreSpeakerVolume;
 
-    [ObservableProperty]
-    private string updateStatusText = string.Empty;
-
-    [ObservableProperty]
-    private bool isUpdateReady;
-
-    [ObservableProperty]
-    private bool canCheckForUpdates = true;
-
-    public GeneralViewModel(AppState state, SettingsStore settings, StartupService startup, UpdateService updates, AppLifetime lifetime)
+    public GeneralViewModel(AppState state, SettingsStore settings, StartupService startup, UpdatesViewModel updates, AppLifetime lifetime)
     {
         this.state = state;
         this.settings = settings;
         this.startup = startup;
-        this.updates = updates;
         this.lifetime = lifetime;
-        updates.StatusChanged += () => Application.Current?.Dispatcher.BeginInvoke(SyncUpdateStatus);
+        Updates = updates;
         state.SettingsChanged += Sync;
         Sync();
-        SyncUpdateStatus();
     }
 
     public string Version => AppInfo.Version;
 
-    public bool UpdatesSupported => updates.IsSupported;
+    public UpdatesViewModel Updates { get; }
 
     public bool CanRunAsAdministrator => ElevatedStart.IsSupported;
 
@@ -124,27 +112,6 @@ internal sealed partial class GeneralViewModel : ObservableObject
             syncing = false;
         }
     }
-
-    private void SyncUpdateStatus()
-    {
-        UpdateStatusText = updates.Status switch
-        {
-            UpdateStatus.Checking => "Checking…",
-            UpdateStatus.UpToDate => "Up to date",
-            UpdateStatus.Downloading => $"Downloading {updates.NewVersion}…",
-            UpdateStatus.ReadyToRestart => $"Version {updates.NewVersion} is ready",
-            UpdateStatus.Failed => "Couldn't check for updates",
-            _ => string.Empty
-        };
-        IsUpdateReady = updates.Status == UpdateStatus.ReadyToRestart;
-        CanCheckForUpdates = updates.Status is not (UpdateStatus.Checking or UpdateStatus.Downloading or UpdateStatus.ReadyToRestart);
-    }
-
-    [RelayCommand]
-    private Task CheckNow() => updates.CheckAsync();
-
-    [RelayCommand]
-    private void RestartToUpdate() => updates.RestartAndApply();
 
     [RelayCommand]
     private void OpenLogs() => Open(AppInfo.LogsDirectory);

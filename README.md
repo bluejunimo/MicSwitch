@@ -20,7 +20,12 @@ This is a rebuild of [MicSwitch by Xab3r](https://github.com/iXab3r/MicSwitch), 
 - It no longer depends on the PoeEye library or on git submodules.
 
 ## Install
-Download `MicSwitch-win-Setup.exe` from the releases page of this repository. Installed copies update themselves from the same place.
+Download `MicSwitch2-win-Setup.exe` from the releases page of this repository and run it. Windows may warn that the publisher is unknown, because the installer is not signed: choose **More info**, then **Run anyway**.
+
+### Updates
+An installed copy updates itself from this repository's releases; nobody has to download anything again.
+- **Update automatically** (General, on by default): a new version is downloaded in the background. MicSwitch then offers **Restart to update** in its window, its tray menu and a notification, and installs the update by itself the next time it starts.
+- With that switched off, nothing is checked until you press **Check for updates**; **Download and install** then does the rest.
 
 ### Coming from MicSwitch 1.x
 1. Exit the old MicSwitch (tray icon, Exit) and run the new one once. It imports your microphone, hotkeys, sounds and overlay settings.
@@ -28,6 +33,18 @@ Download `MicSwitch-win-Setup.exe` from the releases page of this repository. In
 3. If Task Scheduler still lists a task named `MicSwitch` afterwards, delete it. Version 1.x used it to start at sign-in.
 
 Settings live in `%APPDATA%\MicSwitch\settings.json`, logs in `%APPDATA%\MicSwitch\logs`.
+
+## Publishing a release
+The repository must be public; installed copies read its releases without signing in.
+1. Commit your changes and push them.
+2. Tag the commit with the new version and push the tag:
+   ```
+   git tag v2.0.1
+   git push origin v2.0.1
+   ```
+3. The `Release` workflow (Actions tab) tests, builds and packs that version and publishes it as a GitHub release. Installed copies find it within six hours, when they next start, or when someone presses **Check for updates**.
+
+Always use a higher version than the last release, in the form `v<major>.<minor>.<patch>`.
 
 ## Build
 Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download).

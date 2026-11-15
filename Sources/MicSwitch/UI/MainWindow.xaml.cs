@@ -17,10 +17,12 @@ internal partial class MainWindow
         SettingsStore settings,
         IServiceProvider services,
         MicrophoneHeaderViewModel microphone,
-        SpeakersHeaderViewModel speakers)
+        SpeakersHeaderViewModel speakers,
+        UpdatesViewModel updates)
     {
         this.settings = settings;
         InitializeComponent();
+        UpdateBanner.DataContext = updates;
         MicrophoneHeader.DataContext = microphone;
         SpeakersHeader.DataContext = speakers;
 

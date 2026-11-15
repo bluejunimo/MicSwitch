@@ -100,34 +100,40 @@
             <ui:ToggleSwitch AutomationProperties.Name="Restore speaker volume" IsChecked="{Binding RestoreSpeakerVolume}" />
         </ui:CardControl>
 
-        <StackPanel Visibility="{Binding UpdatesSupported, Converter={StaticResource VisibleWhenTrue}}">
-            <ui:TextBlock Style="{StaticResource SectionHeader}" Text="Updates" />
+        <ui:TextBlock Style="{StaticResource SectionHeader}" Text="Updates" />
 
-            <ui:CardControl Margin="0,0,0,4"
-                            Header="Check for updates automatically"
-                            Icon="{ui:SymbolIcon ArrowSync24}">
-                <ui:ToggleSwitch AutomationProperties.Name="Check for updates automatically" IsChecked="{Binding CheckForUpdates}" />
-            </ui:CardControl>
-
-            <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon ArrowDownload24}">
-                <ui:CardControl.Header>
-                    <StackPanel>
-                        <ui:TextBlock Text="{Binding Version, StringFormat=Version {0}}" />
-                        <ui:TextBlock Style="{StaticResource CardDescription}" Text="{Binding UpdateStatusText}" />
-                    </StackPanel>
-                </ui:CardControl.Header>
-                <StackPanel Orientation="Horizontal">
-                    <ui:Button Command="{Binding CheckNowCommand}"
-                               Content="Check now"
-                               IsEnabled="{Binding CanCheckForUpdates}"
-                               Visibility="{Binding IsUpdateReady, Converter={StaticResource VisibleWhenFalse}}" />
-                    <ui:Button Appearance="Primary"
-                               Command="{Binding RestartToUpdateCommand}"
-                               Content="Restart to update"
-                               Visibility="{Binding IsUpdateReady, Converter={StaticResource VisibleWhenTrue}}" />
+        <ui:CardControl Margin="0,0,0,4"
+                        Icon="{ui:SymbolIcon ArrowSync24}"
+                        IsEnabled="{Binding Updates.IsSupported}">
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <ui:TextBlock Text="Update automatically" />
+                    <ui:TextBlock Style="{StaticResource CardDescription}" Text="Downloads new versions in the background. Off: only when you check." />
                 </StackPanel>
-            </ui:CardControl>
-        </StackPanel>
+            </ui:CardControl.Header>
+            <ui:ToggleSwitch AutomationProperties.Name="Update automatically" IsChecked="{Binding CheckForUpdates}" />
+        </ui:CardControl>
+
+        <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon ArrowDownload24}">
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <ui:TextBlock Text="{Binding Version, StringFormat=Version {0}}" />
+                    <ui:TextBlock Style="{StaticResource CardDescription}" Text="{Binding Updates.StatusText}" />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <Grid>
+                <!-- The same button, plain while there is nothing to install and accented when there is. -->
+                <ui:Button Command="{Binding Updates.ActCommand}"
+                           Content="{Binding Updates.ActionText}"
+                           IsEnabled="{Binding Updates.CanAct}"
+                           Visibility="{Binding Updates.IsUpdateOffered, Converter={StaticResource VisibleWhenFalse}}" />
+                <ui:Button Appearance="Primary"
+                           Command="{Binding Updates.ActCommand}"
+                           Content="{Binding Updates.ActionText}"
+                           IsEnabled="{Binding Updates.CanAct}"
+                           Visibility="{Binding Updates.IsUpdateOffered, Converter={StaticResource VisibleWhenTrue}}" />
+            </Grid>
+        </ui:CardControl>
 
         <ui:TextBlock Style="{StaticResource SectionHeader}" Text="About" />
 
