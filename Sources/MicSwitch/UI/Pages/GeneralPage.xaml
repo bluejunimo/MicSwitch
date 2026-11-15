@@ -1,0 +1,79 @@
+<Page x:Class="MicSwitch.UI.Pages.GeneralPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      x:ClassModifier="internal"
+      Title="General">
+    <StackPanel Margin="0,0,0,24">
+        <ui:TextBlock Style="{StaticResource PageTitle}" Text="General" />
+
+        <ui:CardControl Margin="0,0,0,4"
+                        Header="Run at startup"
+                        Icon="{ui:SymbolIcon Power24}">
+            <ui:ToggleSwitch AutomationProperties.Name="Run at startup" IsChecked="{Binding RunAtStartup}" />
+        </ui:CardControl>
+
+        <ui:CardControl Margin="0,0,0,4"
+                        Header="Start minimized"
+                        Icon="{ui:SymbolIcon ArrowMinimize24}">
+            <ui:ToggleSwitch AutomationProperties.Name="Start minimized" IsChecked="{Binding StartMinimized}" />
+        </ui:CardControl>
+
+        <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon Dismiss24}">
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <ui:TextBlock Text="Close to tray" />
+                    <ui:TextBlock Style="{StaticResource CardDescription}" Text="Closing the window keeps MicSwitch running." />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ui:ToggleSwitch AutomationProperties.Name="Close to tray" IsChecked="{Binding CloseToTray}" />
+        </ui:CardControl>
+
+        <StackPanel Visibility="{Binding UpdatesSupported, Converter={StaticResource VisibleWhenTrue}}">
+            <ui:TextBlock Style="{StaticResource SectionHeader}" Text="Updates" />
+
+            <ui:CardControl Margin="0,0,0,4"
+                            Header="Check for updates automatically"
+                            Icon="{ui:SymbolIcon ArrowSync24}">
+                <ui:ToggleSwitch AutomationProperties.Name="Check for updates automatically" IsChecked="{Binding CheckForUpdates}" />
+            </ui:CardControl>
+
+            <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon ArrowDownload24}">
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock Text="{Binding Version, StringFormat=Version {0}}" />
+                        <ui:TextBlock Style="{StaticResource CardDescription}" Text="{Binding UpdateStatusText}" />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <StackPanel Orientation="Horizontal">
+                    <ui:Button Command="{Binding CheckNowCommand}"
+                               Content="Check now"
+                               IsEnabled="{Binding CanCheckForUpdates}"
+                               Visibility="{Binding IsUpdateReady, Converter={StaticResource VisibleWhenFalse}}" />
+                    <ui:Button Appearance="Primary"
+                               Command="{Binding RestartToUpdateCommand}"
+                               Content="Restart to update"
+                               Visibility="{Binding IsUpdateReady, Converter={StaticResource VisibleWhenTrue}}" />
+                </StackPanel>
+            </ui:CardControl>
+        </StackPanel>
+
+        <ui:TextBlock Style="{StaticResource SectionHeader}" Text="About" />
+
+        <ui:CardControl Margin="0,0,0,4"
+                        Header="Logs"
+                        Icon="{ui:SymbolIcon Folder24}">
+            <ui:Button Command="{Binding OpenLogsCommand}" Content="Open folder" />
+        </ui:CardControl>
+
+        <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon Info24}">
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <ui:TextBlock Text="{Binding Version, StringFormat=MicSwitch {0}}" />
+                    <ui:TextBlock Style="{StaticResource CardDescription}" Text="Based on MicSwitch by Xab3r." />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ui:Button Command="{Binding OpenUpstreamCommand}" Content="Original project" />
+        </ui:CardControl>
+    </StackPanel>
+</Page>

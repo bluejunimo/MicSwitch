@@ -1,0 +1,75 @@
+<Page x:Class="MicSwitch.UI.Pages.SoundsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      x:ClassModifier="internal"
+      Title="Sounds">
+    <StackPanel Margin="0,0,0,24">
+        <ui:TextBlock Style="{StaticResource PageTitle}" Text="Sounds" />
+
+        <ui:CardControl Margin="0,0,0,4"
+                        Header="When muted"
+                        Icon="{ui:SymbolIcon MicOff24}">
+            <StackPanel Orientation="Horizontal">
+                <ComboBox MinWidth="200"
+                          AutomationProperties.Name="Sound when muted"
+                          DisplayMemberPath="Label"
+                          ItemsSource="{Binding Sounds}"
+                          SelectedItem="{Binding MuteSound}" />
+                <ui:Button Margin="8,0,0,0"
+                           AutomationProperties.Name="Play mute sound"
+                           Command="{Binding PlayMuteSoundCommand}"
+                           Icon="{ui:SymbolIcon Play24}"
+                           ToolTip="Play" />
+            </StackPanel>
+        </ui:CardControl>
+
+        <ui:CardControl Margin="0,0,0,4"
+                        Header="When unmuted"
+                        Icon="{ui:SymbolIcon Mic24}">
+            <StackPanel Orientation="Horizontal">
+                <ComboBox MinWidth="200"
+                          AutomationProperties.Name="Sound when unmuted"
+                          DisplayMemberPath="Label"
+                          ItemsSource="{Binding Sounds}"
+                          SelectedItem="{Binding UnmuteSound}" />
+                <ui:Button Margin="8,0,0,0"
+                           AutomationProperties.Name="Play unmute sound"
+                           Command="{Binding PlayUnmuteSoundCommand}"
+                           Icon="{ui:SymbolIcon Play24}"
+                           ToolTip="Play" />
+            </StackPanel>
+        </ui:CardControl>
+
+        <ui:CardControl Margin="0,0,0,4"
+                        Header="Volume"
+                        Icon="{ui:SymbolIcon Speaker224}">
+            <StackPanel Orientation="Horizontal">
+                <Slider Width="220"
+                        VerticalAlignment="Center"
+                        AutomationProperties.Name="Sound volume"
+                        Maximum="100"
+                        Minimum="0"
+                        Value="{Binding Volume}" />
+                <TextBlock Style="{StaticResource PercentLabel}" Text="{Binding Volume, StringFormat={}{0:0}%}" />
+            </StackPanel>
+        </ui:CardControl>
+
+        <ui:CardControl Margin="0,0,0,4"
+                        Header="Play on"
+                        Icon="{ui:SymbolIcon Headphones24}">
+            <ComboBox MinWidth="240"
+                      MaxWidth="320"
+                      AutomationProperties.Name="Output device"
+                      DisplayMemberPath="Label"
+                      ItemsSource="{Binding Outputs}"
+                      SelectedItem="{Binding SelectedOutput}" />
+        </ui:CardControl>
+
+        <ui:CardControl Margin="0,0,0,4"
+                        Header="Your own sounds"
+                        Icon="{ui:SymbolIcon MusicNote224}">
+            <ui:Button Command="{Binding AddSoundCommand}" Content="Add…" />
+        </ui:CardControl>
+    </StackPanel>
+</Page>
