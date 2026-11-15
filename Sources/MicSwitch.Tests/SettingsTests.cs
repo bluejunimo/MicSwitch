@@ -103,7 +103,7 @@ public class LegacySettingsImporterTests : IDisposable
         Assert.EndsWith(".png", settings.Overlay.MicIconPath);
         Assert.Null(settings.Overlay.MutedIconPath);
 
-        Assert.True(settings.Speakers.Enabled);
+        Assert.True(settings.Speakers.ExtraHotkeysEnabled);
         Assert.Equal(DeviceSelection.All, settings.Speakers.Device);
         Assert.Equal("Ctrl+Up", settings.Speakers.VolumeUpHotkey.Key);
         Assert.False(settings.Speakers.VolumeUpHotkey.Suppress);
@@ -195,5 +195,31 @@ public class SettingsStoreTests : IDisposable
 
         Assert.Null(SettingsStore.TryRead(path));
         Assert.Null(SettingsStore.TryRead(path + ".missing"));
+    }
+
+    [Fact]
+    public void Settings_from_version_1_keep_their_speaker_hotkeys_and_get_silent_speaker_sounds()
+    {
+        var settings = SettingsStore.Deserialize(
+            """
+            {
+              "Version": 1,
+              "Sounds": { "MuteSound": "mute", "UnmuteSound": "unmute" },
+              "Speakers": { "Enabled": true, "ToggleHotkey": { "Key": "F9" } }
+            }
+            """);
+
+        Assert.Equal(AppSettings.CurrentVersion, settings.Version);
+        Assert.True(settings.Speakers.ExtraHotkeysEnabled);
+        Assert.Equal("F9", settings.Speakers.ToggleHotkey.Key);
+        Assert.Equal(MuteMode.Toggle, settings.Speakers.Mode);
+        Assert.Equal("mute", settings.Sounds.MuteSound);
+        Assert.Equal(string.Empty, settings.Speakers.Sounds.MuteSound);
+        Assert.Equal(string.Empty, settings.Speakers.Sounds.UnmuteSound);
+        Assert.Equal(OverlayVisibility.Never, settings.Speakers.Overlay.Visibility);
+
+        var saved = SettingsStore.Serialize(settings);
+        Assert.DoesNotContain("\"Enabled\"", saved);
+        Assert.True(SettingsStore.Deserialize(saved).Speakers.ExtraHotkeysEnabled);
     }
 }

@@ -1,17 +1,29 @@
 using MicSwitch.Audio;
-using MicSwitch.Hotkeys;
 using MicSwitch.Infrastructure;
 using MicSwitch.Settings;
 
 namespace MicSwitch.Services;
 
-/// <summary>
-/// Applies the microphone settings: which device, what the hotkeys do in each mute mode, the state
-/// to start in, and the sound played when the mute state changes. Runs on the audio thread.
-/// </summary>
-internal sealed class MicrophoneService
+/// <summary>What a mute hotkey does.</summary>
+internal enum MuteAction
 {
-    private readonly DeviceController microphone;
+    /// <summary>The main hotkey: what it does depends on the mute mode.</summary>
+    Main,
+    Toggle,
+    Mute,
+    Unmute,
+    PushToTalk,
+    PushToMute
+}
+
+/// <summary>
+/// Applies the settings of the microphone or of the speakers: which device, what the hotkeys do in each
+/// mute mode, the state to start in, and the sound played when the mute state changes. Runs on the audio thread.
+/// </summary>
+internal sealed class MuteService
+{
+    private readonly DeviceProfile profile;
+    private readonly DeviceController device;
     private readonly NotificationPlayer player;
     private readonly SettingsStore settings;
     private readonly IWorkQueue queue;
@@ -19,7 +31,7 @@ internal sealed class MicrophoneService
     private DeviceSelection? appliedDevice;
     private MuteMode? appliedMode;
 
-    // State to put the microphone in as soon as it is connected.
+    // State to put the device in as soon as it is connected.
     private bool? pendingMute;
     private bool pendingMuteIsSilent;
     private float? pendingVolume;
@@ -27,9 +39,10 @@ internal sealed class MicrophoneService
     // The mute state the user last heard a sound for (or started from).
     private bool? heardMute;
 
-    public MicrophoneService(DeviceController microphone, NotificationPlayer player, SettingsStore settings, IWorkQueue queue)
+    public MuteService(DeviceProfile profile, DeviceController device, NotificationPlayer player, SettingsStore settings, IWorkQueue queue)
     {
-        this.microphone = microphone;
+        this.profile = profile;
+        this.device = device;
         this.player = player;
         this.settings = settings;
         this.queue = queue;
@@ -37,40 +50,40 @@ internal sealed class MicrophoneService
 
     public void Start()
     {
-        microphone.StateChanged += OnStateChanged;
-        microphone.SelectionRebound += selection => settings.Update(s => s.Microphone.Device = selection);
+        device.StateChanged += OnStateChanged;
+        device.SelectionRebound += selection => settings.Update(s => profile.Device(s).Device = selection);
         settings.Changed += changed => queue.Post(() => Apply(changed));
         queue.Post(() =>
         {
             var current = settings.Current;
-            if (current.Microphone.RestoreVolume)
+            if (profile.Device(current) is { RestoreVolume: true } saved)
             {
-                pendingVolume = current.Microphone.Volume;
+                pendingVolume = saved.Volume;
             }
 
             Apply(current);
-            microphone.Start();
+            device.Start();
         });
     }
 
     /// <summary>Handles a hotkey press or release. Call on the audio thread.</summary>
-    public void OnHotkey(HotkeyAction action, bool isDown)
+    public void OnHotkey(MuteAction action, bool isDown)
     {
         switch (action)
         {
-            case HotkeyAction.MicMain:
-                switch (settings.Current.Microphone.Mode)
+            case MuteAction.Main:
+                switch (profile.Device(settings.Current).Mode)
                 {
                     case MuteMode.PushToTalk:
-                        microphone.SetMute(!isDown);
+                        device.SetMute(!isDown);
                         break;
                     case MuteMode.PushToMute:
-                        microphone.SetMute(isDown);
+                        device.SetMute(isDown);
                         break;
                     default:
                         if (isDown)
                         {
-                            microphone.ToggleMute();
+                            device.ToggleMute();
                         }
 
                         break;
@@ -78,35 +91,35 @@ internal sealed class MicrophoneService
 
                 break;
 
-            case HotkeyAction.MicToggle when isDown:
-                microphone.ToggleMute();
+            case MuteAction.Toggle when isDown:
+                device.ToggleMute();
                 break;
-            case HotkeyAction.MicMute when isDown:
-                microphone.SetMute(true);
+            case MuteAction.Mute when isDown:
+                device.SetMute(true);
                 break;
-            case HotkeyAction.MicUnmute when isDown:
-                microphone.SetMute(false);
+            case MuteAction.Unmute when isDown:
+                device.SetMute(false);
                 break;
-            case HotkeyAction.MicPushToTalk:
-                microphone.SetMute(!isDown);
+            case MuteAction.PushToTalk:
+                device.SetMute(!isDown);
                 break;
-            case HotkeyAction.MicPushToMute:
-                microphone.SetMute(isDown);
+            case MuteAction.PushToMute:
+                device.SetMute(isDown);
                 break;
         }
     }
 
     private void Apply(AppSettings current)
     {
-        var mic = current.Microphone;
-        microphone.PropagateVolume = mic.RestoreVolume;
-        player.SetDevice(current.Sounds.OutputDevice);
+        var mic = profile.Device(current);
+        device.PropagateVolume = mic.RestoreVolume;
+        player.SetDevice(profile.Sounds(current).OutputDevice);
 
         if (appliedDevice != mic.Device)
         {
             appliedDevice = mic.Device;
             heardMute = null;
-            microphone.Select(mic.Device);
+            device.Select(mic.Device);
         }
 
         if (appliedMode != mic.Mode)
@@ -130,7 +143,7 @@ internal sealed class MicrophoneService
             {
                 pendingMute = wanted;
                 pendingMuteIsSilent = isStartup;
-                if (microphone.State is { IsConnected: true, Mute: not null } state)
+                if (device.State is { IsConnected: true, Mute: not null } state)
                 {
                     OnStateChanged(state);
                 }
@@ -142,23 +155,24 @@ internal sealed class MicrophoneService
     {
         if (!state.IsConnected || state.Mute is not { } mute)
         {
-            // No sound when the microphone comes back; its state then is simply the new starting point.
+            // No sound when the device comes back; its state then is simply the new starting point.
             heardMute = null;
             return;
         }
 
         var current = settings.Current;
+        var saved = profile.Device(current);
+        var sounds = profile.Sounds(current);
         var baseline = mute;
 
         if (pendingVolume is { } volume)
         {
             pendingVolume = null;
-            microphone.SetVolume(volume);
+            device.SetVolume(volume);
         }
-        else if (current.Microphone.RestoreVolume && state.Volume is { } actual &&
-                 Math.Abs(actual - (current.Microphone.Volume ?? -1f)) > 0.004f)
+        else if (saved.RestoreVolume && state.Volume is { } actual && Math.Abs(actual - (saved.Volume ?? -1f)) > 0.004f)
         {
-            settings.Update(s => s.Microphone.Volume = actual);
+            settings.Update(s => profile.Device(s).Volume = actual);
         }
 
         if (pendingMute is { } wanted)
@@ -166,7 +180,7 @@ internal sealed class MicrophoneService
             pendingMute = null;
             if (wanted != mute)
             {
-                microphone.SetMute(wanted);
+                device.SetMute(wanted);
                 if (pendingMuteIsSilent)
                 {
                     baseline = wanted;
@@ -176,7 +190,11 @@ internal sealed class MicrophoneService
 
         if (heardMute is { } previous && previous != mute)
         {
-            player.Play(mute ? current.Sounds.MuteSound : current.Sounds.UnmuteSound, current.Sounds.Volume);
+            var sound = mute ? sounds.MuteSound : sounds.UnmuteSound;
+            if (!string.IsNullOrEmpty(sound))
+            {
+                player.Play(sound, sounds.Volume);
+            }
         }
 
         heardMute = baseline;

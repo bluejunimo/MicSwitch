@@ -5,13 +5,11 @@
       x:ClassModifier="internal"
       Title="Overlay">
     <StackPanel Margin="0,0,0,24">
-        <ui:TextBlock Style="{StaticResource PageTitle}" Text="Overlay" />
-
         <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon Eye24}">
             <ui:CardControl.Header>
                 <StackPanel>
                     <ui:TextBlock Text="Show overlay" />
-                    <ui:TextBlock Style="{StaticResource CardDescription}" Text="A microphone icon that stays on top of other windows." />
+                    <ui:TextBlock Style="{StaticResource CardDescription}" Text="{Binding Description}" />
                 </StackPanel>
             </ui:CardControl.Header>
             <ComboBox MinWidth="160"
@@ -46,14 +44,14 @@
                     <ui:TextBlock Style="{StaticResource CardDescription}" Text="Drag the overlay, or its corner to resize. Turn off when done." />
                 </StackPanel>
             </ui:CardControl.Header>
-            <ui:ToggleSwitch AutomationProperties.Name="Move and resize" IsChecked="{Binding IsUnlocked}" />
-        </ui:CardControl>
-
-        <ui:CardControl Margin="0,0,0,4"
-                        Header="Position and size"
-                        Icon="{ui:SymbolIcon ArrowReset24}"
-                        IsEnabled="{Binding IsShown}">
-            <ui:Button Command="{Binding ResetPositionCommand}" Content="Reset" />
+            <StackPanel Orientation="Horizontal">
+                <ui:Button Margin="0,0,16,0"
+                           AutomationProperties.Name="Reset position and size"
+                           Command="{Binding ResetPositionCommand}"
+                           Content="Reset"
+                           ToolTip="Back to the default position and size" />
+                <ui:ToggleSwitch AutomationProperties.Name="Move and resize" IsChecked="{Binding IsUnlocked}" />
+            </StackPanel>
         </ui:CardControl>
 
         <ui:TextBlock Style="{StaticResource SectionHeader}" Text="Icons" />
@@ -62,30 +60,36 @@
             <ui:CardControl.Header>
                 <StackPanel>
                     <ui:TextBlock Text="Custom icons" />
-                    <ui:TextBlock Style="{StaticResource CardDescription}" Text="Used by the overlay and the tray icon." />
+                    <ui:TextBlock Style="{StaticResource CardDescription}" Text="{Binding IconsDescription}" />
                 </StackPanel>
             </ui:CardControl.Header>
             <StackPanel Orientation="Horizontal">
-                <ui:Button Padding="6"
+                <ui:Button Padding="4"
+                           Appearance="Transparent"
                            AutomationProperties.Name="Icon when on"
+                           BorderThickness="0"
                            Command="{Binding ChooseMicIconCommand}"
-                           ToolTip="Icon when on">
-                    <Image Width="28"
-                           Height="28"
+                           ToolTip="Icon when on. Click to choose an image.">
+                    <Image Width="32"
+                           Height="32"
                            Source="{Binding MicIcon}" />
                 </ui:Button>
-                <ui:Button Margin="8,0,0,0"
-                           Padding="6"
+                <ui:Button Margin="4,0,0,0"
+                           Padding="4"
+                           Appearance="Transparent"
                            AutomationProperties.Name="Icon when muted"
+                           BorderThickness="0"
                            Command="{Binding ChooseMutedIconCommand}"
-                           ToolTip="Icon when muted">
-                    <Image Width="28"
-                           Height="28"
+                           ToolTip="Icon when muted. Click to choose an image.">
+                    <Image Width="32"
+                           Height="32"
                            Source="{Binding MutedIcon}" />
                 </ui:Button>
-                <ui:Button Margin="8,0,0,0"
+                <ui:Button Margin="12,0,0,0"
+                           AutomationProperties.Name="Reset icons"
                            Command="{Binding ResetIconsCommand}"
                            Content="Reset"
+                           ToolTip="Back to the built-in icons"
                            IsEnabled="{Binding HasCustomIcons}" />
             </StackPanel>
         </ui:CardControl>

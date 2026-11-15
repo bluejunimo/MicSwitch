@@ -5,8 +5,6 @@
       x:ClassModifier="internal"
       Title="General">
     <StackPanel Margin="0,0,0,24">
-        <ui:TextBlock Style="{StaticResource PageTitle}" Text="General" />
-
         <ui:CardControl Margin="0,0,0,4"
                         Header="Run at startup"
                         Icon="{ui:SymbolIcon Power24}">
@@ -39,6 +37,67 @@
                 </StackPanel>
             </ui:CardControl.Header>
             <ui:ToggleSwitch AutomationProperties.Name="Close to tray" IsChecked="{Binding CloseToTray}" />
+        </ui:CardControl>
+
+        <ui:CardControl Margin="0,0,0,4"
+                        Header="App theme"
+                        Icon="{ui:SymbolIcon DarkTheme24}">
+            <ComboBox MinWidth="180"
+                      AutomationProperties.Name="App theme"
+                      DisplayMemberPath="Label"
+                      ItemsSource="{Binding Themes}"
+                      SelectedValue="{Binding Theme}"
+                      SelectedValuePath="Value" />
+        </ui:CardControl>
+
+        <ui:TextBlock Style="{StaticResource SectionHeader}" Text="Microphone on startup" />
+
+        <ui:CardControl Margin="0,0,0,4"
+                        Icon="{ui:SymbolIcon MicOff24}"
+                        IsEnabled="{Binding IsStartupStateEnabled}">
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <ui:TextBlock Text="Mute state" />
+                    <ui:TextBlock Style="{StaticResource CardDescription}" Text="Push-to-talk and push-to-mute set this themselves." />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ComboBox MinWidth="180"
+                      AutomationProperties.Name="Microphone mute state on startup"
+                      DisplayMemberPath="Label"
+                      ItemsSource="{Binding StartupStates}"
+                      SelectedValue="{Binding StartupState}"
+                      SelectedValuePath="Value" />
+        </ui:CardControl>
+
+        <ui:CardControl Margin="0,0,0,4"
+                        Header="Restore input volume"
+                        Icon="{ui:SymbolIcon ArrowCounterclockwise24}">
+            <ui:ToggleSwitch AutomationProperties.Name="Restore microphone input volume" IsChecked="{Binding RestoreVolume}" />
+        </ui:CardControl>
+
+        <ui:TextBlock Style="{StaticResource SectionHeader}" Text="Speakers on startup" />
+
+        <ui:CardControl Margin="0,0,0,4"
+                        Icon="{ui:SymbolIcon SpeakerMute24}"
+                        IsEnabled="{Binding IsSpeakerStartupStateEnabled}">
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <ui:TextBlock Text="Mute state" />
+                    <ui:TextBlock Style="{StaticResource CardDescription}" Text="The hold-to-unmute and hold-to-mute modes set this themselves." />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ComboBox MinWidth="180"
+                      AutomationProperties.Name="Speaker mute state on startup"
+                      DisplayMemberPath="Label"
+                      ItemsSource="{Binding StartupStates}"
+                      SelectedValue="{Binding SpeakerStartupState}"
+                      SelectedValuePath="Value" />
+        </ui:CardControl>
+
+        <ui:CardControl Margin="0,0,0,4"
+                        Header="Restore volume"
+                        Icon="{ui:SymbolIcon ArrowCounterclockwise24}">
+            <ui:ToggleSwitch AutomationProperties.Name="Restore speaker volume" IsChecked="{Binding RestoreSpeakerVolume}" />
         </ui:CardControl>
 
         <StackPanel Visibility="{Binding UpdatesSupported, Converter={StaticResource VisibleWhenTrue}}">

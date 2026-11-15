@@ -11,20 +11,22 @@ internal sealed class HotkeyService : IDisposable
 
     private readonly SettingsStore settings;
     private readonly IWorkQueue queue;
-    private readonly MicrophoneService microphone;
-    private readonly SpeakerService speakers;
+    private readonly MuteService microphone;
+    private readonly MuteService speakers;
+    private readonly SpeakerService speakerVolume;
     private readonly HotkeyMatcher matcher = new();
     private readonly InputHook hook;
     private readonly Timer reinstallTimer;
     private readonly object gate = new();
     private HotkeyBinding[] applied = [];
 
-    public HotkeyService(SettingsStore settings, IWorkQueue queue, MicrophoneService microphone, SpeakerService speakers)
+    public HotkeyService(SettingsStore settings, IWorkQueue queue, MuteService microphone, MuteService speakers, SpeakerService speakerVolume)
     {
         this.settings = settings;
         this.queue = queue;
         this.microphone = microphone;
         this.speakers = speakers;
+        this.speakerVolume = speakerVolume;
         hook = new InputHook(matcher, OnHotkey);
         reinstallTimer = new Timer(_ => hook.Reinstall(), null, ReinstallInterval, ReinstallInterval);
     }
@@ -53,29 +55,30 @@ internal sealed class HotkeyService : IDisposable
 
     internal static IEnumerable<HotkeyBinding> BuildBindings(AppSettings current)
     {
-        var mic = current.Microphone;
         var result = new List<HotkeyBinding>();
-        Add(HotkeyAction.MicMain, mic.Hotkey);
-        if (mic.ExtraHotkeysEnabled)
+        AddDevice(current.Microphone, HotkeyAction.MicMain);
+        AddDevice(current.Speakers, HotkeyAction.SpeakerMain);
+        if (current.Speakers.ExtraHotkeysEnabled)
         {
-            Add(HotkeyAction.MicToggle, mic.ToggleHotkey);
-            Add(HotkeyAction.MicMute, mic.MuteHotkey);
-            Add(HotkeyAction.MicUnmute, mic.UnmuteHotkey);
-            Add(HotkeyAction.MicPushToTalk, mic.PushToTalkHotkey);
-            Add(HotkeyAction.MicPushToMute, mic.PushToMuteHotkey);
-        }
-
-        var speaker = current.Speakers;
-        if (speaker.Enabled)
-        {
-            Add(HotkeyAction.SpeakerToggle, speaker.ToggleHotkey);
-            Add(HotkeyAction.SpeakerMute, speaker.MuteHotkey);
-            Add(HotkeyAction.SpeakerUnmute, speaker.UnmuteHotkey);
-            Add(HotkeyAction.SpeakerVolumeUp, speaker.VolumeUpHotkey);
-            Add(HotkeyAction.SpeakerVolumeDown, speaker.VolumeDownHotkey);
+            Add(HotkeyAction.SpeakerVolumeUp, current.Speakers.VolumeUpHotkey);
+            Add(HotkeyAction.SpeakerVolumeDown, current.Speakers.VolumeDownHotkey);
         }
 
         return result;
+
+        // The six mute actions of a device follow each other in HotkeyAction, in MuteAction's order.
+        void AddDevice(DeviceSettings device, HotkeyAction main)
+        {
+            Add(main + (int)MuteAction.Main, device.Hotkey);
+            if (device.ExtraHotkeysEnabled)
+            {
+                Add(main + (int)MuteAction.Toggle, device.ToggleHotkey);
+                Add(main + (int)MuteAction.Mute, device.MuteHotkey);
+                Add(main + (int)MuteAction.Unmute, device.UnmuteHotkey);
+                Add(main + (int)MuteAction.PushToTalk, device.PushToTalkHotkey);
+                Add(main + (int)MuteAction.PushToMute, device.PushToMuteHotkey);
+            }
+        }
 
         void Add(HotkeyAction action, HotkeySetting hotkey)
         {
@@ -110,13 +113,18 @@ internal sealed class HotkeyService : IDisposable
     // Called on the hook thread: hand over and return at once.
     private void OnHotkey(HotkeyBinding binding, bool isDown) => queue.Post(() =>
     {
-        if (binding.Action >= HotkeyAction.SpeakerToggle)
+        var action = binding.Action;
+        if (action >= HotkeyAction.SpeakerVolumeUp)
         {
-            speakers.OnHotkey(binding.Action, isDown);
+            speakerVolume.OnHotkey(action, isDown);
+        }
+        else if (action >= HotkeyAction.SpeakerMain)
+        {
+            speakers.OnHotkey((MuteAction)(action - HotkeyAction.SpeakerMain), isDown);
         }
         else
         {
-            microphone.OnHotkey(binding.Action, isDown);
+            microphone.OnHotkey((MuteAction)(action - HotkeyAction.MicMain), isDown);
         }
     });
 }

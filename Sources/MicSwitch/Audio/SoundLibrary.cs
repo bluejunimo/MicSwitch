@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Microsoft.VisualBasic.FileIO;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 
@@ -28,13 +29,20 @@ internal sealed class SoundLibrary
 
     private readonly string builtInDirectory;
     private readonly string userDirectory;
+    private readonly Action<string> deleteFile;
     private readonly ConcurrentDictionary<string, CachedSound?> cache = new(StringComparer.OrdinalIgnoreCase);
 
-    public SoundLibrary(string builtInDirectory, string userDirectory)
+    /// <param name="deleteFile">How a removed sound is deleted; by default it goes to the Recycle Bin.</param>
+    public SoundLibrary(string builtInDirectory, string userDirectory, Action<string>? deleteFile = null)
     {
         this.builtInDirectory = builtInDirectory;
         this.userDirectory = userDirectory;
+        this.deleteFile = deleteFile ??
+                          (path => FileSystem.DeleteFile(path, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin));
     }
+
+    /// <summary>A sound was added or removed. Raised on the thread that did it.</summary>
+    public event Action? Changed;
 
     public static string FileFilter { get; } =
         "Sound files|" + string.Join(";", Extensions.Select(x => "*" + x)) + "|All files|*.*";
@@ -51,7 +59,7 @@ internal sealed class SoundLibrary
 
             foreach (var file in Directory.EnumerateFiles(directory))
             {
-                if (Extensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase))
+                if (IsSound(file))
                 {
                     // A user file replaces a built-in sound of the same name.
                     result[Path.GetFileNameWithoutExtension(file)] = new SoundInfo(Path.GetFileNameWithoutExtension(file), file, builtIn);
@@ -103,8 +111,75 @@ internal sealed class SoundLibrary
         }
 
         cache.TryRemove(id, out _);
+        Changed?.Invoke();
         return id;
     }
+
+    /// <summary>
+    /// Deletes a sound the user added. A built-in sound of the same name, if any, takes its place again. Returns false when there is no such user sound.
+    /// </summary>
+    public bool Remove(string id)
+    {
+        var info = List().FirstOrDefault(x => !x.IsBuiltIn && string.Equals(x.Id, id, StringComparison.OrdinalIgnoreCase));
+        if (info == null)
+        {
+            return false;
+        }
+
+        deleteFile(info.Path);
+        cache.TryRemove(id, out _);
+        Changed?.Invoke();
+        return true;
+    }
+
+    /// <summary>
+    /// Deletes the user's files that are exact copies of a built-in sound, and returns which built-in sound
+    /// stands in for each (old ID to built-in ID). MicSwitch 1.x kept its stock sounds in the user's
+    /// folder, so after an upgrade they would show up twice, once of them removable.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> ReplaceCopiesOfBuiltIns()
+    {
+        var replaced = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (!Directory.Exists(builtInDirectory) || !Directory.Exists(userDirectory))
+        {
+            return replaced;
+        }
+
+        var builtIns = Directory.EnumerateFiles(builtInDirectory)
+            .Where(IsSound)
+            .Select(path => (Path: path, Length: new FileInfo(path).Length))
+            .ToList();
+        foreach (var file in Directory.EnumerateFiles(userDirectory).Where(IsSound).ToList())
+        {
+            try
+            {
+                var length = new FileInfo(file).Length;
+                foreach (var builtIn in builtIns.Where(x => x.Length == length))
+                {
+                    if (File.ReadAllBytes(file).AsSpan().SequenceEqual(File.ReadAllBytes(builtIn.Path)))
+                    {
+                        File.Delete(file);
+                        replaced[Path.GetFileNameWithoutExtension(file)] = Path.GetFileNameWithoutExtension(builtIn.Path);
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Log.Warning(ex, "Could not check sound {Path}", file);
+            }
+        }
+
+        if (replaced.Count > 0)
+        {
+            cache.Clear();
+            Changed?.Invoke();
+        }
+
+        return replaced;
+    }
+
+    private static bool IsSound(string path) => Extensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
 
     private static CachedSound Decode(string path)
     {

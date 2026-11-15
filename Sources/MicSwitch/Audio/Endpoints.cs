@@ -49,19 +49,24 @@ internal sealed class DeviceState : IEquatable<DeviceState>
         IReadOnlyList<EndpointInfo> available,
         IReadOnlyList<EndpointInfo> bound,
         bool? mute,
-        float? volume)
+        float? volume,
+        string? defaultName = null)
     {
         Selection = selection;
         Available = available;
         Bound = bound;
         Mute = mute;
         Volume = volume;
+        DefaultName = defaultName;
     }
 
     public DeviceSelection Selection { get; }
 
     /// <summary>All active devices, for pickers.</summary>
     public IReadOnlyList<EndpointInfo> Available { get; }
+
+    /// <summary>The device Windows currently uses by default, whatever the selection is. Null when there is none.</summary>
+    public string? DefaultName { get; }
 
     /// <summary>The devices the selection resolved to. Empty means disconnected.</summary>
     public IReadOnlyList<EndpointInfo> Bound { get; }
@@ -79,6 +84,7 @@ internal sealed class DeviceState : IEquatable<DeviceState>
         Selection == other.Selection &&
         Mute == other.Mute &&
         Volume == other.Volume &&
+        DefaultName == other.DefaultName &&
         Available.SequenceEqual(other.Available) &&
         Bound.SequenceEqual(other.Bound);
 

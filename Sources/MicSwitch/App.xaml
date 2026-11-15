@@ -34,7 +34,8 @@
 
             <Style x:Key="CardDescription" TargetType="{x:Type ui:TextBlock}">
                 <Setter Property="FontTypography" Value="Caption" />
-                <Setter Property="Appearance" Value="Secondary" />
+                <!-- Not Appearance="Secondary": that keeps the old colour when the theme is switched. -->
+                <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
                 <Setter Property="TextWrapping" Value="Wrap" />
             </Style>
 
@@ -47,12 +48,12 @@
             <!-- The two key boxes of a hotkey. -->
             <DataTemplate x:Key="HotkeyKeysTemplate" DataType="{x:Type vm:HotkeyEditorViewModel}">
                 <StackPanel Orientation="Horizontal">
-                    <controls:HotkeyBox Gesture="{Binding Key}" />
+                    <controls:HotkeyBox AutomationProperties.Name="{Binding Label}" Gesture="{Binding Key}" />
                     <ui:TextBlock Margin="8,0"
                                   VerticalAlignment="Center"
-                                  Appearance="Secondary"
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                   Text="or" />
-                    <controls:HotkeyBox Gesture="{Binding AltKey}" />
+                    <controls:HotkeyBox AutomationProperties.Name="{Binding Label, StringFormat={}{0}\, alternative}" Gesture="{Binding AltKey}" />
                 </StackPanel>
             </DataTemplate>
 
@@ -76,7 +77,7 @@
                                 Grid.Column="1"
                                 Margin="0,4,0,0"
                                 Orientation="Horizontal">
-                        <CheckBox Content="Block from other apps" IsChecked="{Binding Suppress}" />
+                        <CheckBox Content="Suppress in other apps" IsChecked="{Binding Suppress}" />
                         <CheckBox Margin="16,0,0,0"
                                   Content="Ignore modifiers"
                                   IsChecked="{Binding IgnoreModifiers}"

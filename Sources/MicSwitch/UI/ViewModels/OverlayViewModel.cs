@@ -7,10 +7,12 @@ using MicSwitch.Shell;
 
 namespace MicSwitch.UI.ViewModels;
 
-internal sealed partial class OverlayViewModel : ObservableObject
+/// <summary>The microphone's overlay icon. <see cref="SpeakerOverlayViewModel"/> is the same for the speakers.</summary>
+internal partial class OverlayViewModel : ObservableObject
 {
     private const string ImageFilter = "Images|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.ico|All files|*.*";
 
+    private readonly DeviceProfile profile;
     private readonly AppState state;
     private readonly SettingsStore settings;
     private bool syncing;
@@ -37,12 +39,24 @@ internal sealed partial class OverlayViewModel : ObservableObject
     private bool hasCustomIcons;
 
     public OverlayViewModel(AppState state, SettingsStore settings)
+        : this(DeviceProfile.Microphone, state, settings)
     {
+    }
+
+    protected OverlayViewModel(DeviceProfile profile, AppState state, SettingsStore settings)
+    {
+        this.profile = profile;
         this.state = state;
         this.settings = settings;
         state.SettingsChanged += Sync;
         Sync();
     }
+
+    public string Description => profile.IsMicrophone
+        ? "A microphone icon that stays on top of other windows."
+        : "A speaker icon that stays on top of other windows.";
+
+    public string IconsDescription => profile.IsMicrophone ? "Used by the overlay and the tray icon." : "Used by the overlay.";
 
     public IReadOnlyList<Option<OverlayVisibility>> Visibilities { get; } =
     [
@@ -54,7 +68,8 @@ internal sealed partial class OverlayViewModel : ObservableObject
 
     private void Sync()
     {
-        var current = state.Settings.Overlay;
+        var current = profile.Overlay(state.Settings);
+        var speakers = !profile.IsMicrophone;
         syncing = true;
         try
         {
@@ -62,8 +77,8 @@ internal sealed partial class OverlayViewModel : ObservableObject
             IsShown = current.Visibility != OverlayVisibility.Never;
             Opacity = Math.Round(current.Opacity * 100);
             IsUnlocked = IsShown && !current.Locked;
-            MicIcon = IconRenderer.LoadImage(current.MicIconPath) ?? IconRenderer.RenderOverlay(MicVisual.Live, 64);
-            MutedIcon = IconRenderer.LoadImage(current.MutedIconPath) ?? IconRenderer.RenderOverlay(MicVisual.Muted, 64);
+            MicIcon = IconRenderer.LoadImage(current.MicIconPath) ?? IconRenderer.RenderOverlay(MicVisual.Live, 64, speakers);
+            MutedIcon = IconRenderer.LoadImage(current.MutedIconPath) ?? IconRenderer.RenderOverlay(MicVisual.Muted, 64, speakers);
             HasCustomIcons = current.MicIconPath != null || current.MutedIconPath != null;
         }
         finally
@@ -75,23 +90,23 @@ internal sealed partial class OverlayViewModel : ObservableObject
     [RelayCommand]
     private void ResetPosition() => settings.Update(s =>
     {
-        var defaults = new OverlaySettings();
-        s.Overlay.X = null;
-        s.Overlay.Y = null;
-        s.Overlay.Size = defaults.Size;
+        var overlay = profile.Overlay(s);
+        overlay.X = null;
+        overlay.Y = null;
+        overlay.Size = new OverlaySettings().Size;
     });
 
     [RelayCommand]
-    private void ChooseMicIcon() => ChooseIcon("mic", (overlay, path) => overlay.MicIconPath = path);
+    private void ChooseMicIcon() => ChooseIcon(profile.IsMicrophone ? "mic" : "speaker", (overlay, path) => overlay.MicIconPath = path);
 
     [RelayCommand]
-    private void ChooseMutedIcon() => ChooseIcon("muted", (overlay, path) => overlay.MutedIconPath = path);
+    private void ChooseMutedIcon() => ChooseIcon(profile.IsMicrophone ? "muted" : "speaker-muted", (overlay, path) => overlay.MutedIconPath = path);
 
     [RelayCommand]
     private void ResetIcons() => settings.Update(s =>
     {
-        s.Overlay.MicIconPath = null;
-        s.Overlay.MutedIconPath = null;
+        profile.Overlay(s).MicIconPath = null;
+        profile.Overlay(s).MutedIconPath = null;
     });
 
     private void ChooseIcon(string name, Action<OverlaySettings, string> assign)
@@ -108,7 +123,7 @@ internal sealed partial class OverlayViewModel : ObservableObject
             Directory.CreateDirectory(AppInfo.IconsDirectory);
             var target = Path.Combine(AppInfo.IconsDirectory, $"{name}-{DateTime.Now:yyyyMMddHHmmss}{Path.GetExtension(dialog.FileName)}");
             File.Copy(dialog.FileName, target, overwrite: true);
-            settings.Update(s => assign(s.Overlay, target));
+            settings.Update(s => assign(profile.Overlay(s), target));
         }
         catch (Exception ex)
         {
@@ -122,10 +137,10 @@ internal sealed partial class OverlayViewModel : ObservableObject
         {
             settings.Update(s =>
             {
-                s.Overlay.Visibility = value;
+                profile.Overlay(s).Visibility = value;
                 if (value == OverlayVisibility.Never)
                 {
-                    s.Overlay.Locked = true;
+                    profile.Overlay(s).Locked = true;
                 }
             });
         }
@@ -135,7 +150,7 @@ internal sealed partial class OverlayViewModel : ObservableObject
     {
         if (!syncing)
         {
-            settings.Update(s => s.Overlay.Opacity = value / 100);
+            settings.Update(s => profile.Overlay(s).Opacity = value / 100);
         }
     }
 
@@ -143,7 +158,10 @@ internal sealed partial class OverlayViewModel : ObservableObject
     {
         if (!syncing)
         {
-            settings.Update(s => s.Overlay.Locked = !value);
+            settings.Update(s => profile.Overlay(s).Locked = !value);
         }
     }
 }
+
+internal sealed class SpeakerOverlayViewModel(AppState state, SettingsStore settings)
+    : OverlayViewModel(DeviceProfile.Speakers, state, settings);

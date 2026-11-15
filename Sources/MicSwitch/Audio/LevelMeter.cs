@@ -9,7 +9,7 @@ namespace MicSwitch.Audio;
 /// Measures the input level of one microphone by recording from it and throwing the audio away.
 /// Only runs while a target is set, because an open recording lights up the Windows "microphone in use" indicator.
 /// </summary>
-internal sealed class LevelMeter : IDisposable
+internal sealed class LevelMeter : ILevelMeter, IDisposable
 {
     private readonly IWorkQueue queue;
     private readonly Func<string, MMDevice?> openDevice;

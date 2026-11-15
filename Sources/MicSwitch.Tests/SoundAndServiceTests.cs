@@ -104,7 +104,7 @@ public class NotificationPlayerTests
     }
 }
 
-public class MicrophoneServiceTests : IDisposable
+public class MuteServiceTests : IDisposable
 {
     private readonly string directory = Path.Combine(Path.GetTempPath(), "MicSwitch.Tests", Guid.NewGuid().ToString("N"));
     private readonly TestQueue queue = new();
@@ -123,7 +123,7 @@ public class MicrophoneServiceTests : IDisposable
         }
     }
 
-    private MicrophoneService Start(Action<AppSettings> configure)
+    private MuteService Start(Action<AppSettings> configure, DeviceProfile? profile = null)
     {
         var initial = new AppSettings();
         initial.Microphone.Device = DeviceSelection.Specific("solo", "Mic");
@@ -132,7 +132,8 @@ public class MicrophoneServiceTests : IDisposable
         configure(initial);
 
         settings = new SettingsStore(Path.Combine(directory, "settings.json"), initial);
-        controller = new DeviceController(source, queue, AudioFlow.Capture);
+        profile ??= DeviceProfile.Microphone;
+        controller = new DeviceController(source, queue, profile.Flow);
         var player = new NotificationPlayer(
             queue,
             id =>
@@ -141,12 +142,12 @@ public class MicrophoneServiceTests : IDisposable
                 return new CachedSound(new float[2]);
             },
             _ => output);
-        var service = new MicrophoneService(controller, player, settings, queue);
+        var service = new MuteService(profile, controller, player, settings, queue);
         service.Start();
         return service;
     }
 
-    private void Press(MicrophoneService service, HotkeyAction action, bool isDown) => queue.Post(() => service.OnHotkey(action, isDown));
+    private void Press(MuteService service, MuteAction action, bool isDown) => queue.Post(() => service.OnHotkey(action, isDown));
 
     [Fact]
     public void Push_to_mute_unmutes_at_startup_without_a_sound_then_follows_the_key()
@@ -157,9 +158,9 @@ public class MicrophoneServiceTests : IDisposable
         Assert.False(mic.Mute);
         Assert.Empty(requestedSounds);
 
-        Press(service, HotkeyAction.MicMain, true);
+        Press(service, MuteAction.Main, true);
         Assert.True(mic.Mute);
-        Press(service, HotkeyAction.MicMain, false);
+        Press(service, MuteAction.Main, false);
         Assert.False(mic.Mute);
 
         Assert.Equal(["muted", "unmuted"], requestedSounds);
@@ -172,9 +173,9 @@ public class MicrophoneServiceTests : IDisposable
         var service = Start(s => s.Microphone.Mode = MuteMode.PushToTalk);
         Assert.True(mic.Mute);
 
-        Press(service, HotkeyAction.MicMain, true);
+        Press(service, MuteAction.Main, true);
         Assert.False(mic.Mute);
-        Press(service, HotkeyAction.MicMain, false);
+        Press(service, MuteAction.Main, false);
         Assert.True(mic.Mute);
     }
 
@@ -186,11 +187,11 @@ public class MicrophoneServiceTests : IDisposable
         Assert.True(mic.Mute);
         Assert.Empty(requestedSounds);
 
-        Press(service, HotkeyAction.MicMain, true);
-        Press(service, HotkeyAction.MicMain, false);
+        Press(service, MuteAction.Main, true);
+        Press(service, MuteAction.Main, false);
         Assert.False(mic.Mute);
 
-        Press(service, HotkeyAction.MicMain, true);
+        Press(service, MuteAction.Main, true);
         Assert.True(mic.Mute);
         Assert.Equal(["unmuted", "muted"], requestedSounds);
     }
@@ -242,8 +243,8 @@ public class MicrophoneServiceTests : IDisposable
 
         for (var i = 0; i < 50; i++)
         {
-            Press(service, HotkeyAction.MicMain, true);
-            Press(service, HotkeyAction.MicMain, false);
+            Press(service, MuteAction.Main, true);
+            Press(service, MuteAction.Main, false);
         }
 
         Assert.Equal(100, output.Played.Count);
@@ -256,19 +257,19 @@ public class MicrophoneServiceTests : IDisposable
         var mic = source.Plug("solo", "Mic");
         var service = Start(_ => { });
 
-        Press(service, HotkeyAction.MicMute, true);
-        Press(service, HotkeyAction.MicMute, false);
+        Press(service, MuteAction.Mute, true);
+        Press(service, MuteAction.Mute, false);
         Assert.True(mic.Mute);
 
-        Press(service, HotkeyAction.MicUnmute, true);
+        Press(service, MuteAction.Unmute, true);
         Assert.False(mic.Mute);
 
-        Press(service, HotkeyAction.MicPushToMute, true);
+        Press(service, MuteAction.PushToMute, true);
         Assert.True(mic.Mute);
-        Press(service, HotkeyAction.MicPushToMute, false);
+        Press(service, MuteAction.PushToMute, false);
         Assert.False(mic.Mute);
 
-        Press(service, HotkeyAction.MicToggle, true);
+        Press(service, MuteAction.Toggle, true);
         Assert.True(mic.Mute);
     }
 
@@ -288,5 +289,41 @@ public class MicrophoneServiceTests : IDisposable
 
         controller!.SetVolume(0.4f);
         Assert.Equal(0.4f, settings.Current.Microphone.Volume);
+    }
+
+    [Fact]
+    public void Speakers_follow_their_own_mode_sounds_and_device()
+    {
+        var speakers = source.Plug("out", "Speakers");
+        var service = Start(
+            s =>
+            {
+                s.Speakers.Device = DeviceSelection.Specific("out", "Speakers");
+                s.Speakers.Mode = MuteMode.PushToMute;
+                s.Speakers.Sounds.MuteSound = "quiet";
+                s.Speakers.Sounds.UnmuteSound = "loud";
+            },
+            DeviceProfile.Speakers);
+
+        Press(service, MuteAction.Main, true);
+        Assert.True(speakers.Mute);
+        Press(service, MuteAction.Main, false);
+        Assert.False(speakers.Mute);
+
+        // Its own sounds, not the microphone's.
+        Assert.Equal(["quiet", "loud"], requestedSounds);
+    }
+
+    [Fact]
+    public void Speakers_make_no_sound_until_one_is_chosen()
+    {
+        var speakers = source.Plug("out", "Speakers");
+        var service = Start(s => s.Speakers.Device = DeviceSelection.Specific("out", "Speakers"), DeviceProfile.Speakers);
+
+        Press(service, MuteAction.Toggle, true);
+
+        Assert.True(speakers.Mute);
+        Assert.Empty(requestedSounds);
+        Assert.Empty(output.Played);
     }
 }

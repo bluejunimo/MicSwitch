@@ -21,6 +21,8 @@ internal sealed class DeviceController : IDisposable
 
     private DeviceSelection selection = DeviceSelection.Default;
     private IReadOnlyList<EndpointInfo> available = [];
+    private IReadOnlyList<string> defaultIds = [];
+    private List<string> targetOrder = [];
     private DeviceState state = DeviceState.Empty;
     private IDisposable? pendingRefresh;
     private IDisposable? rescan;
@@ -29,6 +31,8 @@ internal sealed class DeviceController : IDisposable
     private float? lastVolume;
     private int enumerationFailures;
     private int publishQueued;
+    private float requestedVolume;
+    private int volumeQueued;
     private bool disposed;
 
     public DeviceController(IEndpointSource source, IWorkQueue queue, AudioFlow flow)
@@ -89,7 +93,22 @@ internal sealed class DeviceController : IDisposable
         }
     });
 
-    public void SetVolume(float volume) => queue.Post(() => SetVolumeCore(volume));
+    /// <summary>
+    /// Only the newest request counts: a slider being dragged asks far faster than some devices answer,
+    /// and working through every step would hold up the audio thread (and the mute hotkey with it).
+    /// </summary>
+    public void SetVolume(float volume)
+    {
+        Volatile.Write(ref requestedVolume, volume);
+        if (Interlocked.Exchange(ref volumeQueued, 1) == 0)
+        {
+            queue.Post(() =>
+            {
+                Interlocked.Exchange(ref volumeQueued, 0);
+                SetVolumeCore(Volatile.Read(ref requestedVolume));
+            });
+        }
+    }
 
     public void AdjustVolume(float delta) => queue.Post(() =>
     {
@@ -185,7 +204,9 @@ internal sealed class DeviceController : IDisposable
         try
         {
             available = source.GetActiveEndpoints(flow);
+            defaultIds = source.GetDefaultEndpointIds(flow);
             targets = Resolve();
+            targetOrder = targets;
             enumerationFailures = 0;
         }
         catch (Exception ex)
@@ -194,6 +215,7 @@ internal sealed class DeviceController : IDisposable
             enumerationFailures++;
             log.Warning(ex, "{Flow}: could not list devices (attempt {Attempt})", flow, enumerationFailures);
             available = [];
+            defaultIds = [];
             ReleaseAll();
             if (enumerationFailures >= 2)
             {
@@ -254,7 +276,7 @@ internal sealed class DeviceController : IDisposable
                 return available.Select(x => x.Id).ToList();
 
             case DeviceSelectionKind.WindowsDefault:
-                return source.GetDefaultEndpointIds(flow)
+                return defaultIds
                     .Where(id => available.Any(x => SameId(x.Id, id)))
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToList();
@@ -338,8 +360,14 @@ internal sealed class DeviceController : IDisposable
         lastMute = mute ?? lastMute;
         lastVolume = volume ?? lastVolume;
 
-        var bound = endpoints.Values.Select(x => x.Info).ToList();
-        var next = new DeviceState(selection, available, bound, mute, volume);
+        // In the order the selection resolved to, so the Windows default comes first even when another
+        // device (the "communications" default, say) was opened earlier.
+        var bound = endpoints.Values
+            .Select(x => x.Info)
+            .OrderBy(x => targetOrder.FindIndex(id => SameId(id, x.Id)) is var index and >= 0 ? index : int.MaxValue)
+            .ToList();
+        var defaultName = available.FirstOrDefault(x => SameId(x.Id, defaultIds.FirstOrDefault()))?.Name;
+        var next = new DeviceState(selection, available, bound, mute, volume, defaultName);
         if (next.Equals(state))
         {
             return;

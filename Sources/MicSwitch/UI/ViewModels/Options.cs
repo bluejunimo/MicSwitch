@@ -4,14 +4,28 @@ using MicSwitch.Audio;
 namespace MicSwitch.UI.ViewModels;
 
 /// <summary>A choice in a drop-down.</summary>
-internal sealed record Option<T>(T Value, string Label);
+internal sealed record Option<T>(T Value, string Label)
+{
+    // What screen readers and type-to-select see.
+    public override string ToString() => Label;
+}
 
-internal sealed record DeviceOption(DeviceSelection Selection, string Label);
+internal sealed record DeviceOption(DeviceSelection Selection, string Label)
+{
+    public override string ToString() => Label;
+}
+
+/// <summary>An entry in a sound drop-down: a sound, or the action that adds one.</summary>
+internal sealed record SoundOption(string Value, string Label, bool CanRemove = false, bool IsAddAction = false)
+{
+    public override string ToString() => Label;
+}
 
 internal static class DeviceOptions
 {
     /// <summary>
-    /// Fills a device drop-down: the Windows default, optionally "all", then every active device.
+    /// Fills a device drop-down: the Windows default (naming the device it currently stands for),
+    /// optionally "all", then every active device.
     /// A saved device that isn't there right now stays in the list, marked as disconnected.
     /// Returns the entry for the current selection.
     /// </summary>
@@ -19,9 +33,11 @@ internal static class DeviceOptions
         ObservableCollection<DeviceOption> target,
         IReadOnlyList<EndpointInfo> available,
         DeviceSelection selection,
-        string? allLabel)
+        string? allLabel,
+        string? defaultName)
     {
-        var options = new List<DeviceOption> { new(DeviceSelection.Default, "Windows default") };
+        var defaultLabel = defaultName == null ? "Windows default" : $"Windows default ({defaultName})";
+        var options = new List<DeviceOption> { new(DeviceSelection.Default, defaultLabel) };
         if (allLabel != null)
         {
             options.Add(new DeviceOption(DeviceSelection.All, allLabel));

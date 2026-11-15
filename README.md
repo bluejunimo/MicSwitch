@@ -9,8 +9,8 @@ This is a rebuild of [MicSwitch by Xab3r](https://github.com/iXab3r/MicSwitch), 
 - One microphone, the Windows default, or all microphones at once
 - A sound when the microphone is muted or unmuted, including your own sound files
 - An always-on-top overlay icon and a tray icon that show the mute state
-- Optional hotkeys for speaker mute and volume
-- Light and dark theme, following Windows
+- The same for your speakers: mute hotkeys and modes, sounds, an overlay icon, plus volume hotkeys
+- Light and dark theme, following Windows or set by hand
 
 ## What changed in version 2
 - A microphone is found again after it is unplugged, moved to another USB port, or renumbered by a Windows update.

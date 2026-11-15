@@ -32,6 +32,27 @@ internal sealed partial class GeneralViewModel : ObservableObject
     private bool checkForUpdates;
 
     [ObservableProperty]
+    private AppTheme theme;
+
+    [ObservableProperty]
+    private StartupMicState startupState;
+
+    [ObservableProperty]
+    private bool isStartupStateEnabled;
+
+    [ObservableProperty]
+    private bool restoreVolume;
+
+    [ObservableProperty]
+    private StartupMicState speakerStartupState;
+
+    [ObservableProperty]
+    private bool isSpeakerStartupStateEnabled;
+
+    [ObservableProperty]
+    private bool restoreSpeakerVolume;
+
+    [ObservableProperty]
     private string updateStatusText = string.Empty;
 
     [ObservableProperty]
@@ -59,6 +80,20 @@ internal sealed partial class GeneralViewModel : ObservableObject
 
     public bool CanRunAsAdministrator => ElevatedStart.IsSupported;
 
+    public IReadOnlyList<Option<AppTheme>> Themes { get; } =
+    [
+        new(AppTheme.System, "Use system setting"),
+        new(AppTheme.Light, "Light"),
+        new(AppTheme.Dark, "Dark")
+    ];
+
+    public IReadOnlyList<Option<StartupMicState>> StartupStates { get; } =
+    [
+        new(StartupMicState.Keep, "Keep as is"),
+        new(StartupMicState.Mute, "Mute"),
+        new(StartupMicState.Unmute, "Unmute")
+    ];
+
     public string UpstreamUrl => AppInfo.UpstreamUrl;
 
     private void Sync()
@@ -72,6 +107,17 @@ internal sealed partial class GeneralViewModel : ObservableObject
             StartMinimized = current.StartMinimized;
             CloseToTray = current.CloseToTray;
             CheckForUpdates = current.CheckForUpdates;
+            Theme = current.Theme;
+
+            var microphone = state.Settings.Microphone;
+            StartupState = microphone.StartupState;
+            IsStartupStateEnabled = microphone.Mode == MuteMode.Toggle;
+            RestoreVolume = microphone.RestoreVolume;
+
+            var speakers = state.Settings.Speakers;
+            SpeakerStartupState = speakers.StartupState;
+            IsSpeakerStartupStateEnabled = speakers.Mode == MuteMode.Toggle;
+            RestoreSpeakerVolume = speakers.RestoreVolume;
         }
         finally
         {
@@ -170,6 +216,54 @@ internal sealed partial class GeneralViewModel : ObservableObject
         if (!syncing)
         {
             settings.Update(s => s.General.CloseToTray = value);
+        }
+    }
+
+    partial void OnThemeChanged(AppTheme value)
+    {
+        if (!syncing)
+        {
+            settings.Update(s => s.General.Theme = value);
+        }
+    }
+
+    partial void OnStartupStateChanged(StartupMicState value)
+    {
+        if (!syncing)
+        {
+            settings.Update(s => s.Microphone.StartupState = value);
+        }
+    }
+
+    partial void OnRestoreVolumeChanged(bool value)
+    {
+        if (!syncing)
+        {
+            settings.Update(s =>
+            {
+                s.Microphone.RestoreVolume = value;
+                s.Microphone.Volume = value ? state.Microphone.Volume : null;
+            });
+        }
+    }
+
+    partial void OnSpeakerStartupStateChanged(StartupMicState value)
+    {
+        if (!syncing)
+        {
+            settings.Update(s => s.Speakers.StartupState = value);
+        }
+    }
+
+    partial void OnRestoreSpeakerVolumeChanged(bool value)
+    {
+        if (!syncing)
+        {
+            settings.Update(s =>
+            {
+                s.Speakers.RestoreVolume = value;
+                s.Speakers.Volume = value ? state.Speakers.Volume : null;
+            });
         }
     }
 

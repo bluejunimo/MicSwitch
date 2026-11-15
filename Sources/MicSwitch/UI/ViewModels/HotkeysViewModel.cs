@@ -4,8 +4,10 @@ using MicSwitch.Shell;
 
 namespace MicSwitch.UI.ViewModels;
 
-internal sealed partial class HotkeysViewModel : ObservableObject
+/// <summary>The mute mode and hotkeys of the microphone. <see cref="SpeakerHotkeysViewModel"/> is the same for the speakers.</summary>
+internal partial class HotkeysViewModel : ObservableObject
 {
+    private readonly DeviceProfile profile;
     private readonly AppState state;
     private readonly SettingsStore settings;
     private bool syncing;
@@ -17,35 +19,58 @@ internal sealed partial class HotkeysViewModel : ObservableObject
     private bool extraHotkeysEnabled;
 
     public HotkeysViewModel(AppState state, SettingsStore settings)
+        : this(DeviceProfile.Microphone, state, settings)
     {
+    }
+
+    protected HotkeysViewModel(DeviceProfile profile, AppState state, SettingsStore settings)
+    {
+        this.profile = profile;
         this.state = state;
         this.settings = settings;
-        Hotkey = new HotkeyEditorViewModel("Hotkey", settings, s => s.Microphone.Hotkey);
-        ExtraHotkeys =
+
+        // "Talk" only makes sense for a microphone.
+        var holdToUnmute = profile.IsMicrophone ? "Push-to-talk" : "Hold to unmute";
+        var holdToMute = profile.IsMicrophone ? "Push-to-mute" : "Hold to mute";
+        Modes =
         [
-            new HotkeyEditorViewModel("Toggle", settings, s => s.Microphone.ToggleHotkey),
-            new HotkeyEditorViewModel("Mute", settings, s => s.Microphone.MuteHotkey),
-            new HotkeyEditorViewModel("Unmute", settings, s => s.Microphone.UnmuteHotkey),
-            new HotkeyEditorViewModel("Push-to-talk", settings, s => s.Microphone.PushToTalkHotkey),
-            new HotkeyEditorViewModel("Push-to-mute", settings, s => s.Microphone.PushToMuteHotkey)
+            new(MuteMode.Toggle, "Toggle"),
+            new(MuteMode.PushToTalk, holdToUnmute),
+            new(MuteMode.PushToMute, holdToMute)
         ];
 
+        Hotkey = new HotkeyEditorViewModel("Hotkey", settings, s => profile.Device(s).Hotkey);
+        var extra = new List<HotkeyEditorViewModel>
+        {
+            new("Toggle", settings, s => profile.Device(s).ToggleHotkey),
+            new("Mute", settings, s => profile.Device(s).MuteHotkey),
+            new("Unmute", settings, s => profile.Device(s).UnmuteHotkey),
+            new(holdToUnmute, settings, s => profile.Device(s).PushToTalkHotkey),
+            new(holdToMute, settings, s => profile.Device(s).PushToMuteHotkey)
+        };
+        if (!profile.IsMicrophone)
+        {
+            extra.Add(new HotkeyEditorViewModel("Volume up", settings, s => s.Speakers.VolumeUpHotkey));
+            extra.Add(new HotkeyEditorViewModel("Volume down", settings, s => s.Speakers.VolumeDownHotkey));
+        }
+
+        ExtraHotkeys = extra;
+        ExtraHotkeysDescription = profile.IsMicrophone
+            ? "Additional hotkeys for other modes."
+            : "Additional hotkeys for other modes and for the volume.";
         IsNotElevated = !ElevatedStart.IsElevated;
 
         state.SettingsChanged += Sync;
         Sync();
     }
 
-    public IReadOnlyList<Option<MuteMode>> Modes { get; } =
-    [
-        new(MuteMode.Toggle, "Toggle"),
-        new(MuteMode.PushToTalk, "Push-to-talk"),
-        new(MuteMode.PushToMute, "Push-to-mute")
-    ];
+    public IReadOnlyList<Option<MuteMode>> Modes { get; }
 
     public HotkeyEditorViewModel Hotkey { get; }
 
     public IReadOnlyList<HotkeyEditorViewModel> ExtraHotkeys { get; }
+
+    public string ExtraHotkeysDescription { get; }
 
     /// <summary>Windows hides input meant for an administrator's window from ordinary apps.</summary>
     public bool IsNotElevated { get; }
@@ -53,11 +78,12 @@ internal sealed partial class HotkeysViewModel : ObservableObject
     private void Sync()
     {
         var current = state.Settings;
+        var device = profile.Device(current);
         syncing = true;
         try
         {
-            Mode = current.Microphone.Mode;
-            ExtraHotkeysEnabled = current.Microphone.ExtraHotkeysEnabled;
+            Mode = device.Mode;
+            ExtraHotkeysEnabled = device.ExtraHotkeysEnabled;
         }
         finally
         {
@@ -75,7 +101,7 @@ internal sealed partial class HotkeysViewModel : ObservableObject
     {
         if (!syncing)
         {
-            settings.Update(s => s.Microphone.Mode = value);
+            settings.Update(s => profile.Device(s).Mode = value);
         }
     }
 
@@ -83,7 +109,10 @@ internal sealed partial class HotkeysViewModel : ObservableObject
     {
         if (!syncing)
         {
-            settings.Update(s => s.Microphone.ExtraHotkeysEnabled = value);
+            settings.Update(s => profile.Device(s).ExtraHotkeysEnabled = value);
         }
     }
 }
+
+internal sealed class SpeakerHotkeysViewModel(AppState state, SettingsStore settings)
+    : HotkeysViewModel(DeviceProfile.Speakers, state, settings);

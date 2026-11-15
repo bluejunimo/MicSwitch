@@ -111,6 +111,10 @@ internal sealed class SettingsStore : IDisposable
 
     internal static string Serialize(AppSettings settings) => JsonSerializer.Serialize(settings, JsonOptions);
 
-    internal static AppSettings Deserialize(string json) =>
-        JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? new AppSettings();
+    internal static AppSettings Deserialize(string json)
+    {
+        var settings = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? new AppSettings();
+        settings.Upgrade();
+        return settings;
+    }
 }

@@ -215,4 +215,67 @@ public class DeviceControllerTests
         Assert.Equal(1f, mic.Volume);
         Assert.Equal(1f, controller.State.Volume);
     }
+
+    [Fact]
+    public void Only_the_newest_of_several_waiting_volume_requests_is_applied()
+    {
+        var mic = source.Plug("solo", "Mic");
+        var controller = Create(DeviceSelection.Specific("solo", "Mic"));
+        var before = mic.VolumeWrites;
+
+        // Requests that arrive while the audio thread is busy, like a slider being dragged.
+        queue.Post(() =>
+        {
+            controller.SetVolume(0.2f);
+            controller.SetVolume(0.3f);
+            controller.SetVolume(0.9f);
+        });
+
+        Assert.Equal(0.9f, mic.Volume);
+        Assert.Equal(1, mic.VolumeWrites - before);
+
+        controller.SetVolume(0.4f);
+        Assert.Equal(0.4f, mic.Volume);
+    }
+
+    [Fact]
+    public void Reports_the_current_Windows_default_and_follows_it_when_it_changes()
+    {
+        source.Plug("solo", "Microphone (HyperX SoloCast)");
+        source.Plug("cam", "Microphone (HD Webcam)");
+        source.DefaultIds.Add("solo");
+
+        // The name is reported whatever is selected, so the "Windows default" entry can show it.
+        var controller = Create(DeviceSelection.Specific("cam", "Microphone (HD Webcam)"));
+        Assert.Equal("Microphone (HyperX SoloCast)", controller.State.DefaultName);
+
+        source.DefaultIds[0] = "cam";
+        controller.RequestRefresh();
+        queue.Advance(Settle);
+        Assert.Equal("Microphone (HD Webcam)", controller.State.DefaultName);
+
+        source.DefaultIds.Clear();
+        controller.RequestRefresh();
+        queue.Advance(Settle);
+        Assert.Null(controller.State.DefaultName);
+    }
+
+    [Fact]
+    public void The_Windows_default_is_listed_first_even_when_another_default_was_bound_earlier()
+    {
+        source.Plug("old", "Microphone (Old)");
+        source.Plug("new", "Microphone (New)");
+        source.DefaultIds.Add("old");
+        var controller = Create(DeviceSelection.Default);
+        Assert.Equal(["old"], controller.State.Bound.Select(x => x.Id));
+
+        // "new" becomes the default; "old" stays on as the default for calls.
+        source.DefaultIds.Clear();
+        source.DefaultIds.AddRange(["new", "old"]);
+        controller.RequestRefresh();
+        queue.Advance(Settle);
+
+        Assert.Equal(["new", "old"], controller.State.Bound.Select(x => x.Id));
+        Assert.Equal("Microphone (New)", controller.State.DefaultName);
+    }
 }

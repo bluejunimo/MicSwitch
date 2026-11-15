@@ -12,7 +12,7 @@ using static MicSwitch.Infrastructure.NativeMethods;
 namespace MicSwitch.Shell;
 
 /// <summary>
-/// A small always-on-top microphone icon. Locked, it lets clicks through to whatever is underneath;
+/// A small always-on-top microphone or speaker icon. Locked, it lets clicks through to whatever is underneath;
 /// unlocked, it can be dragged and resized. Position and size are kept in screen pixels.
 /// </summary>
 internal partial class OverlayWindow : Window
@@ -24,6 +24,7 @@ internal partial class OverlayWindow : Window
 
     private readonly AppState state;
     private readonly SettingsStore settings;
+    private readonly DeviceProfile profile;
     private readonly DispatcherTimer volumeTimer;
     private readonly WinEventProc foregroundChanged;
     private IntPtr handle;
@@ -32,11 +33,13 @@ internal partial class OverlayWindow : Window
     private (MicVisual Visual, string Source) shownIcon = (MicVisual.Disconnected, "?");
     private double resizeSize;
 
-    public OverlayWindow(AppState state, SettingsStore settings)
+    public OverlayWindow(AppState state, SettingsStore settings, DeviceProfile profile)
     {
         this.state = state;
         this.settings = settings;
+        this.profile = profile;
         InitializeComponent();
+        Title = profile.IsMicrophone ? "MicSwitch overlay" : "MicSwitch speaker overlay";
 
         foregroundChanged = (_, _, _, _, _, _, _) => KeepOnTop();
         volumeTimer = new DispatcherTimer { Interval = VolumeIndicatorTime };
@@ -44,9 +47,8 @@ internal partial class OverlayWindow : Window
         lastSpeakers = (state.Speakers.Volume, state.Speakers.Mute);
 
         EditFrame.MouseLeftButtonDown += OnFrameMouseDown;
-        state.MicrophoneChanged += Update;
+        state.OnDeviceChanged(profile.Flow, profile.IsMicrophone ? Update : OnSpeakersChanged);
         state.SettingsChanged += Update;
-        state.SpeakersChanged += OnSpeakersChanged;
         Update();
     }
 
@@ -69,17 +71,17 @@ internal partial class OverlayWindow : Window
         }
 
         state.MicrophoneChanged -= Update;
-        state.SettingsChanged -= Update;
         state.SpeakersChanged -= OnSpeakersChanged;
+        state.SettingsChanged -= Update;
         base.OnClosed(e);
     }
 
-    private OverlaySettings Overlay => state.Settings.Overlay;
+    private OverlaySettings Overlay => profile.Overlay(state.Settings);
 
     private void Update()
     {
         var overlay = Overlay;
-        var visual = TrayIconService.Describe(state.Microphone);
+        var visual = TrayIconService.Describe(state.Device(profile.Flow));
         var editing = !overlay.Locked && overlay.Visibility != OverlayVisibility.Never;
         var visible = editing || overlay.Visibility switch
         {
@@ -94,7 +96,7 @@ internal partial class OverlayWindow : Window
         {
             shownIcon = (visual, source);
             var custom = IconRenderer.LoadImage(visual == MicVisual.Muted ? overlay.MutedIconPath : overlay.MicIconPath);
-            MicImage.Source = custom ?? IconRenderer.RenderOverlay(visual, 256);
+            MicImage.Source = custom ?? IconRenderer.RenderOverlay(visual, 256, speakers: !profile.IsMicrophone);
         }
 
         MicImage.Opacity = overlay.Opacity;
@@ -118,12 +120,14 @@ internal partial class OverlayWindow : Window
         }
     }
 
+    // The speaker overlay briefly shows the volume as a ring whenever it changes.
     private void OnSpeakersChanged()
     {
+        Update();
         var current = (state.Speakers.Volume, state.Speakers.Mute);
-        var changed = current != lastSpeakers && lastSpeakers.Volume != null && current.Volume != null;
+        var changed = current.Volume != lastSpeakers.Volume && lastSpeakers.Volume != null && current.Volume != null;
         lastSpeakers = current;
-        if (!changed || !state.Settings.Speakers.Enabled || !IsVisible)
+        if (!changed || !IsVisible)
         {
             return;
         }
@@ -179,6 +183,12 @@ internal partial class OverlayWindow : Window
         var scale = VisualTreeHelper.GetDpi(this).DpiScaleX;
         var area = SystemParameters.WorkArea;
         var right = (int)(area.Right * scale) - DefaultMargin;
+        if (!profile.IsMicrophone)
+        {
+            // Beside the microphone's overlay rather than on top of it.
+            right -= size + DefaultMargin / 2;
+        }
+
         var bottom = (int)(area.Bottom * scale) - DefaultMargin;
         return new RECT { Left = right - size, Top = bottom - size, Right = right, Bottom = bottom };
     }
@@ -195,7 +205,7 @@ internal partial class OverlayWindow : Window
     {
         if (e.ClickCount >= 2)
         {
-            settings.Update(s => s.Overlay.Locked = true);
+            settings.Update(s => profile.Overlay(s).Locked = true);
             return;
         }
 
@@ -235,9 +245,10 @@ internal partial class OverlayWindow : Window
         {
             settings.Update(s =>
             {
-                s.Overlay.X = rect.Left;
-                s.Overlay.Y = rect.Top;
-                s.Overlay.Size = Math.Clamp(rect.Right - rect.Left, MinSize, MaxSize);
+                var overlay = profile.Overlay(s);
+                overlay.X = rect.Left;
+                overlay.Y = rect.Top;
+                overlay.Size = Math.Clamp(rect.Right - rect.Left, MinSize, MaxSize);
             });
         }
     }

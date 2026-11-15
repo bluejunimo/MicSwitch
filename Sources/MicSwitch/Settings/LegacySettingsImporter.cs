@@ -148,7 +148,7 @@ internal static partial class LegacySettingsImporter
 
     private static void ImportSpeakers(JsonElement value, SpeakerSettings result)
     {
-        result.Enabled = Bool(value, "IsEnabled") ?? false;
+        result.ExtraHotkeysEnabled = Bool(value, "IsEnabled") ?? false;
         result.Device = Device(value, "DeviceId") ?? DeviceSelection.All;
         result.ToggleHotkey = Hotkey(value, "HotkeyForToggle");
         result.MuteHotkey = Hotkey(value, "HotkeyForMute");

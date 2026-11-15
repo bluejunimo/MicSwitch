@@ -197,7 +197,7 @@ public class HotkeyBindingTests
         Assert.All(bindings, x => Assert.True(x.IgnoreModifiers));
 
         settings.Microphone.ExtraHotkeysEnabled = true;
-        settings.Speakers.Enabled = true;
+        settings.Speakers.ExtraHotkeysEnabled = true;
         bindings = HotkeyService.BuildBindings(settings).ToList();
 
         Assert.Equal(4, bindings.Count);
@@ -205,5 +205,23 @@ public class HotkeyBindingTests
 
         // "Ignore modifiers" is meaningless for a hotkey that names modifiers.
         Assert.False(bindings.Single(x => x.Action == HotkeyAction.SpeakerVolumeUp).IgnoreModifiers);
+    }
+
+    [Fact]
+    public void Speakers_get_a_main_hotkey_and_the_same_extra_hotkeys_as_the_microphone()
+    {
+        var settings = new AppSettings();
+        settings.Speakers.Hotkey = new HotkeySetting { Key = "F20" };
+        settings.Speakers.PushToMuteHotkey = new HotkeySetting { Key = "F21" };
+        settings.Speakers.VolumeDownHotkey = new HotkeySetting { Key = "F22" };
+
+        var bindings = HotkeyService.BuildBindings(settings).ToList();
+        Assert.Equal(HotkeyAction.SpeakerMain, Assert.Single(bindings).Action);
+
+        settings.Speakers.ExtraHotkeysEnabled = true;
+        bindings = HotkeyService.BuildBindings(settings).ToList();
+        Assert.Equal(
+            [HotkeyAction.SpeakerMain, HotkeyAction.SpeakerPushToMute, HotkeyAction.SpeakerVolumeDown],
+            bindings.Select(x => x.Action));
     }
 }

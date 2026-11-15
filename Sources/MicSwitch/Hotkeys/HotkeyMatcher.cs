@@ -8,9 +8,12 @@ internal enum HotkeyAction
     MicUnmute,
     MicPushToTalk,
     MicPushToMute,
+    SpeakerMain,
     SpeakerToggle,
     SpeakerMute,
     SpeakerUnmute,
+    SpeakerPushToTalk,
+    SpeakerPushToMute,
     SpeakerVolumeUp,
     SpeakerVolumeDown
 }

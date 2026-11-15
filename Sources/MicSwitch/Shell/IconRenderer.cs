@@ -20,6 +20,9 @@ internal static class IconRenderer
     private const string MicGlyph = "";
     private const string MicOffGlyph = "";
 
+    private const string SpeakerGlyph = "";
+    private const string SpeakerOffGlyph = "";
+
     // Windows 11 ships Segoe Fluent Icons; Windows 10 has the same glyphs in Segoe MDL2 Assets.
     private static readonly Typeface GlyphFont = new(
         new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
@@ -55,8 +58,16 @@ internal static class IconRenderer
     }
 
     /// <summary>A glyph on a round badge, readable on top of anything.</summary>
-    public static BitmapSource RenderOverlay(MicVisual visual, int size)
+    public static BitmapSource RenderOverlay(MicVisual visual, int size, bool speakers = false)
     {
+        var glyph = (speakers, visual == MicVisual.Muted) switch
+        {
+            (false, false) => MicGlyph,
+            (false, true) => MicOffGlyph,
+            (true, false) => SpeakerGlyph,
+            (true, true) => SpeakerOffGlyph
+        };
+
         var badge = visual == MicVisual.Muted ? Color.FromArgb(0xF0, 0xC4, 0x2B, 0x1C) : Color.FromArgb(0xD8, 0x20, 0x20, 0x20);
         var opacity = visual == MicVisual.Disconnected ? 0.45 : 1.0;
         return Render(size, context =>
@@ -64,7 +75,7 @@ internal static class IconRenderer
             var brush = new SolidColorBrush(badge);
             brush.Freeze();
             context.DrawEllipse(brush, null, new Point(size / 2.0, size / 2.0), size / 2.0, size / 2.0);
-            DrawGlyph(context, visual == MicVisual.Muted ? MicOffGlyph : MicGlyph, size, size * 0.56, Colors.White, opacity);
+            DrawGlyph(context, glyph, size, size * 0.56, Colors.White, opacity);
         });
     }
 

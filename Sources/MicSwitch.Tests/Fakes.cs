@@ -77,6 +77,9 @@ internal sealed class FakeEndpoint(string id, string name) : IAudioEndpoint
 
     public bool Disposed { get; private set; }
 
+    /// <summary>How many times the volume was written.</summary>
+    public int VolumeWrites { get; private set; }
+
     public event Action? Changed;
 
     public bool Mute
@@ -104,6 +107,7 @@ internal sealed class FakeEndpoint(string id, string name) : IAudioEndpoint
             }
 
             volume = value;
+            VolumeWrites++;
         }
     }
 

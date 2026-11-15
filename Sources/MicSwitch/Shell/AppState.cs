@@ -40,6 +40,21 @@ internal sealed class AppState
 
     public DeviceState Speakers { get; private set; }
 
+    public DeviceState Device(AudioFlow flow) => flow == AudioFlow.Capture ? Microphone : Speakers;
+
+    /// <summary>Calls <paramref name="handler"/> on the UI thread whenever that device's state changes.</summary>
+    public void OnDeviceChanged(AudioFlow flow, Action handler)
+    {
+        if (flow == AudioFlow.Capture)
+        {
+            MicrophoneChanged += handler;
+        }
+        else
+        {
+            SpeakersChanged += handler;
+        }
+    }
+
     public AppSettings Settings { get; private set; }
 
     public event Action? MicrophoneChanged;

@@ -22,8 +22,10 @@ public partial class App
     private UpdateService? updates;
     private TrayIconService? tray;
     private OverlayWindow? overlay;
+    private OverlayWindow? speakerOverlay;
     private ServiceProvider? services;
     private MainWindow? mainWindow;
+    private AppTheme? appliedTheme;
     private bool exiting;
 
     public App()
@@ -51,15 +53,24 @@ public partial class App
             args.SetObserved();
         };
 
-        ApplySystemTheme();
-        SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
-
         settings = LoadSettings();
+        ApplyTheme();
+        SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
+        settings.Changed += changed =>
+        {
+            if (changed.General.Theme != appliedTheme)
+            {
+                Dispatcher.BeginInvoke(ApplyTheme);
+            }
+        };
+
         engine = new AudioEngine();
+        UseBuiltInSounds(engine.Sounds, settings);
         var state = new AppState(engine, settings, Dispatcher);
-        var microphone = new MicrophoneService(engine.Microphone, engine.Player, settings, engine.Queue);
-        var speakers = new SpeakerService(engine.Speakers, settings, engine.Queue);
-        hotkeys = new HotkeyService(settings, engine.Queue, microphone, speakers);
+        var microphone = new MuteService(DeviceProfile.Microphone, engine.Microphone, engine.Player, settings, engine.Queue);
+        var speakers = new MuteService(DeviceProfile.Speakers, engine.Speakers, engine.SpeakerPlayer, settings, engine.Queue);
+        var speakerVolume = new SpeakerService(engine.Speakers, engine.Queue);
+        hotkeys = new HotkeyService(settings, engine.Queue, microphone, speakers, speakerVolume);
         updates = new UpdateService(settings);
 
         services = new ServiceCollection()
@@ -69,17 +80,21 @@ public partial class App
             .AddSingleton(updates)
             .AddSingleton<StartupService>()
             .AddSingleton(new AppLifetime(ExitApp))
-            .AddSingleton<MicrophoneViewModel>()
+            .AddSingleton<MicrophoneHeaderViewModel>()
+            .AddSingleton<SpeakersHeaderViewModel>()
             .AddSingleton<HotkeysViewModel>()
             .AddSingleton<SoundsViewModel>()
             .AddSingleton<OverlayViewModel>()
-            .AddSingleton<SpeakersViewModel>()
+            .AddSingleton<SpeakerHotkeysViewModel>()
+            .AddSingleton<SpeakerSoundsViewModel>()
+            .AddSingleton<SpeakerOverlayViewModel>()
             .AddSingleton<GeneralViewModel>()
-            .AddSingleton<MicrophonePage>()
             .AddSingleton<HotkeysPage>()
             .AddSingleton<SoundsPage>()
             .AddSingleton<OverlayPage>()
-            .AddSingleton<SpeakersPage>()
+            .AddSingleton<SpeakerHotkeysPage>()
+            .AddSingleton<SpeakerSoundsPage>()
+            .AddSingleton<SpeakerOverlayPage>()
             .AddSingleton<GeneralPage>()
             .AddSingleton<MainWindow>()
             .BuildServiceProvider();
@@ -89,7 +104,12 @@ public partial class App
         hotkeys.Start();
         HotkeyBox.RecordingChanged += recording => hotkeys.Paused = recording;
 
-        overlay = new OverlayWindow(state, settings);
+        overlay = new OverlayWindow(state, settings, DeviceProfile.Microphone);
+        speakerOverlay = new OverlayWindow(state, settings, DeviceProfile.Speakers);
+
+        // WPF makes the first window the application's main window, and the theme code then gives that
+        // window the settings window's backdrop: a solid square behind the overlay icon.
+        MainWindow = null;
         tray = new TrayIconService(state, engine.Microphone, ShowMainWindow, ExitApp);
 
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
@@ -119,31 +139,59 @@ public partial class App
         base.OnExit(e);
     }
 
-    // The main window follows the Windows theme by itself while it is open. This covers the tray menu
-    // and overlay when it has never been opened.
+    // Windows switched between light and dark (among other things).
     private void OnUserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
     {
-        if (e.Category == UserPreferenceCategory.General)
+        if (e.Category == UserPreferenceCategory.General && appliedTheme == AppTheme.System)
         {
-            Dispatcher.BeginInvoke(ApplySystemTheme);
+            Dispatcher.BeginInvoke(ApplyTheme);
         }
     }
 
-    private static void ApplySystemTheme()
+    private void ApplyTheme()
     {
         // MICSWITCH_THEME forces a theme (used for testing).
-        switch (Environment.GetEnvironmentVariable("MICSWITCH_THEME")?.ToLowerInvariant())
+        var theme = Environment.GetEnvironmentVariable("MICSWITCH_THEME")?.ToLowerInvariant() switch
         {
-            case "dark":
+            "dark" => AppTheme.Dark,
+            "light" => AppTheme.Light,
+            _ => settings?.Current.General.Theme ?? AppTheme.System
+        };
+
+        appliedTheme = settings?.Current.General.Theme ?? AppTheme.System;
+        switch (theme)
+        {
+            case AppTheme.Dark:
                 ApplicationThemeManager.Apply(ApplicationTheme.Dark);
                 break;
-            case "light":
+            case AppTheme.Light:
                 ApplicationThemeManager.Apply(ApplicationTheme.Light);
                 break;
             default:
                 ApplicationThemeManager.ApplySystemTheme();
                 break;
         }
+    }
+
+    // MicSwitch 1.x kept its stock sounds in the user's folder. Where those are the sounds that now ship
+    // with the app, use the shipped ones, so they are listed once and can't be deleted by accident.
+    private static void UseBuiltInSounds(SoundLibrary sounds, SettingsStore settings)
+    {
+        var replaced = sounds.ReplaceCopiesOfBuiltIns();
+        if (replaced.Count == 0)
+        {
+            return;
+        }
+
+        settings.Update(s =>
+        {
+            foreach (var chosen in new[] { s.Sounds, s.Speakers.Sounds })
+            {
+                chosen.MuteSound = replaced.GetValueOrDefault(chosen.MuteSound, chosen.MuteSound);
+                chosen.UnmuteSound = replaced.GetValueOrDefault(chosen.UnmuteSound, chosen.UnmuteSound);
+            }
+        });
+        Log.Information("Using the built-in sounds for {Sounds}", replaced.Keys);
     }
 
     private static SettingsStore LoadSettings()
@@ -171,6 +219,7 @@ public partial class App
         if (mainWindow == null)
         {
             mainWindow = services.GetRequiredService<MainWindow>();
+            MainWindow = mainWindow;
             mainWindow.ExitRequested += ExitApp;
         }
 
@@ -194,6 +243,7 @@ public partial class App
         exiting = true;
         Log.Information("Exiting");
         overlay?.Close();
+        speakerOverlay?.Close();
         if (mainWindow != null)
         {
             mainWindow.AllowClose = true;

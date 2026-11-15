@@ -2,6 +2,7 @@
                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:controls="clr-namespace:MicSwitch.UI.Controls"
                  xmlns:pages="clr-namespace:MicSwitch.UI.Pages"
                  x:ClassModifier="internal"
                  Title="MicSwitch"
@@ -30,27 +31,70 @@
                            IsPaneToggleVisible="True"
                            OpenPaneLength="220"
                            PaneDisplayMode="Left">
+            <!-- Stays in place while the page below it scrolls. -->
+            <ui:NavigationView.Header>
+                <StackPanel x:Name="Header" Margin="32,8,32,4">
+                    <StackPanel Margin="0,0,0,14" Orientation="Horizontal">
+                        <ui:TextBlock x:Name="SectionTitle"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                      FontTypography="Title" />
+                        <ui:SymbolIcon x:Name="TitleSeparator"
+                                       Margin="8,6,8,0"
+                                       FontSize="18"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       Symbol="ChevronRight20" />
+                        <ui:TextBlock x:Name="PageTitle"
+                                      FontTypography="Title"
+                                      Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                    </StackPanel>
+                    <controls:DeviceHeader x:Name="MicrophoneHeader" Visibility="Collapsed" />
+                    <controls:DeviceHeader x:Name="SpeakersHeader" Visibility="Collapsed" />
+                </StackPanel>
+            </ui:NavigationView.Header>
+
             <ui:NavigationView.MenuItems>
-                <ui:NavigationViewItem Content="Microphone"
-                                       Icon="{ui:SymbolIcon Mic24}"
-                                       TargetPageType="{x:Type pages:MicrophonePage}" />
+                <!-- Tooltips matter once the pane is collapsed to icons: both groups use the same three. -->
+                <ui:NavigationViewItemHeader x:Name="MicrophoneGroup"
+                                             Margin="7,4,0,3"
+                                             FontSize="14"
+                                             FontWeight="SemiBold"
+                                             Text="Microphone" />
                 <ui:NavigationViewItem Content="Hotkeys"
                                        Icon="{ui:SymbolIcon Keyboard24}"
-                                       TargetPageType="{x:Type pages:HotkeysPage}" />
+                                       TargetPageType="{x:Type pages:HotkeysPage}"
+                                       ToolTip="Microphone hotkeys" />
                 <ui:NavigationViewItem Content="Sounds"
                                        Icon="{ui:SymbolIcon Alert24}"
-                                       TargetPageType="{x:Type pages:SoundsPage}" />
+                                       TargetPageType="{x:Type pages:SoundsPage}"
+                                       ToolTip="Microphone sounds" />
                 <ui:NavigationViewItem Content="Overlay"
                                        Icon="{ui:SymbolIcon PictureInPicture24}"
-                                       TargetPageType="{x:Type pages:OverlayPage}" />
-                <ui:NavigationViewItem Content="Speakers"
-                                       Icon="{ui:SymbolIcon Speaker224}"
-                                       TargetPageType="{x:Type pages:SpeakersPage}" />
+                                       TargetPageType="{x:Type pages:OverlayPage}"
+                                       ToolTip="Microphone overlay" />
+                <ui:NavigationViewItemSeparator x:Name="GroupSeparator" Visibility="Collapsed" />
+                <ui:NavigationViewItemHeader x:Name="SpeakersGroup"
+                                             Margin="7,10,0,3"
+                                             FontSize="14"
+                                             FontWeight="SemiBold"
+                                             Text="Speakers" />
+                <ui:NavigationViewItem Content="Hotkeys"
+                                       Icon="{ui:SymbolIcon Keyboard24}"
+                                       TargetPageType="{x:Type pages:SpeakerHotkeysPage}"
+                                       ToolTip="Speaker hotkeys" />
+                <ui:NavigationViewItem Content="Sounds"
+                                       Icon="{ui:SymbolIcon Alert24}"
+                                       TargetPageType="{x:Type pages:SpeakerSoundsPage}"
+                                       ToolTip="Speaker sounds" />
+                <ui:NavigationViewItem Content="Overlay"
+                                       Icon="{ui:SymbolIcon PictureInPicture24}"
+                                       TargetPageType="{x:Type pages:SpeakerOverlayPage}"
+                                       ToolTip="Speaker overlay" />
             </ui:NavigationView.MenuItems>
             <ui:NavigationView.FooterMenuItems>
                 <ui:NavigationViewItem Content="General"
                                        Icon="{ui:SymbolIcon Settings24}"
-                                       TargetPageType="{x:Type pages:GeneralPage}" />
+                                       TargetPageType="{x:Type pages:GeneralPage}"
+                                       ToolTip="General settings" />
             </ui:NavigationView.FooterMenuItems>
         </ui:NavigationView>
     </Grid>
