@@ -68,6 +68,7 @@ public partial class App
             .AddSingleton(state)
             .AddSingleton(updates)
             .AddSingleton<StartupService>()
+            .AddSingleton(new AppLifetime(ExitApp))
             .AddSingleton<MicrophoneViewModel>()
             .AddSingleton<HotkeysViewModel>()
             .AddSingleton<SoundsViewModel>()

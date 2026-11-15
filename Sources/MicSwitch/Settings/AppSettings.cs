@@ -87,6 +87,10 @@ internal sealed class GeneralSettings
     public bool StartMinimized { get; set; }
     public bool CloseToTray { get; set; } = true;
     public bool CheckForUpdates { get; set; } = true;
+
+    /// <summary>The executable that the "run as administrator" task was made for; null when that is off.</summary>
+    public string? ElevatedExecutable { get; set; }
+
     public double? WindowWidth { get; set; }
     public double? WindowHeight { get; set; }
 }

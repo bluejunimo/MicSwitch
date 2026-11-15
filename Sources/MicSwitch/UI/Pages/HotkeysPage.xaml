@@ -10,7 +10,7 @@
         <ui:InfoBar Margin="0,0,0,8"
                     IsClosable="True"
                     IsOpen="{Binding IsNotElevated, Mode=OneTime}"
-                    Message="Hotkeys don't work while an app running as administrator is focused."
+                    Message="Hotkeys don't work while an app running as administrator is focused. Run as administrator, under General, fixes that."
                     Severity="Informational" />
 
         <ui:CardControl Margin="0,0,0,4"

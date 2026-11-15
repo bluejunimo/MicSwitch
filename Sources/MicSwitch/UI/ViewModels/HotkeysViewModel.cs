@@ -1,4 +1,3 @@
-using System.Security.Principal;
 using CommunityToolkit.Mvvm.ComponentModel;
 using MicSwitch.Settings;
 using MicSwitch.Shell;
@@ -31,8 +30,7 @@ internal sealed partial class HotkeysViewModel : ObservableObject
             new HotkeyEditorViewModel("Push-to-mute", settings, s => s.Microphone.PushToMuteHotkey)
         ];
 
-        using var identity = WindowsIdentity.GetCurrent();
-        IsNotElevated = !new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
+        IsNotElevated = !ElevatedStart.IsElevated;
 
         state.SettingsChanged += Sync;
         Sync();

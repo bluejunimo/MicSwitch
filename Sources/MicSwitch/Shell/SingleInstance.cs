@@ -1,4 +1,6 @@
+using System.Security.AccessControl;
 using System.Security.Cryptography;
+using System.Security.Principal;
 using System.Text;
 
 namespace MicSwitch.Shell;
@@ -15,17 +17,47 @@ internal sealed class SingleInstance : IDisposable
     private SingleInstance(Mutex mutex)
     {
         this.mutex = mutex;
-        showSignal = new EventWaitHandle(false, EventResetMode.AutoReset, Name + ".Show");
+
+        var security = new EventWaitHandleSecurity();
+        security.AddAccessRule(new EventWaitHandleAccessRule(CurrentUser(), EventWaitHandleRights.FullControl, AccessControlType.Allow));
+        showSignal = EventWaitHandleAcl.Create(false, EventResetMode.AutoReset, Name + ".Show", out _, security);
         registration = ThreadPool.RegisterWaitForSingleObject(showSignal, (_, _) => ShowRequested?.Invoke(), null, Timeout.Infinite, false);
     }
 
     /// <summary>Another launch happened. Raised on a thread-pool thread.</summary>
     public event Action? ShowRequested;
 
-    public static SingleInstance? TryAcquire()
+    /// <param name="wait">How long to wait for a running copy to exit (it is handing over to this one).</param>
+    public static SingleInstance? TryAcquire(TimeSpan wait = default)
     {
-        var mutex = new Mutex(true, Name, out var createdNew);
-        if (createdNew)
+        Mutex mutex;
+        bool owned;
+        try
+        {
+            // Named explicitly for this user: by default an ordinary copy could not even see
+            // one that runs as administrator, and would start beside it.
+            var security = new MutexSecurity();
+            security.AddAccessRule(new MutexAccessRule(CurrentUser(), MutexRights.FullControl, AccessControlType.Allow));
+            mutex = MutexAcl.Create(true, Name, out owned, security);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
+
+        if (!owned && wait > TimeSpan.Zero)
+        {
+            try
+            {
+                owned = mutex.WaitOne(wait);
+            }
+            catch (AbandonedMutexException)
+            {
+                owned = true;
+            }
+        }
+
+        if (owned)
         {
             return new SingleInstance(mutex);
         }
@@ -36,12 +68,18 @@ internal sealed class SingleInstance : IDisposable
 
     public static void SignalExisting()
     {
-        if (EventWaitHandle.TryOpenExisting(Name + ".Show", out var signal))
+        try
         {
-            using (signal)
+            if (EventWaitHandle.TryOpenExisting(Name + ".Show", out var signal))
             {
-                signal.Set();
+                using (signal)
+                {
+                    signal.Set();
+                }
             }
+        }
+        catch (UnauthorizedAccessException)
+        {
         }
     }
 
@@ -50,6 +88,12 @@ internal sealed class SingleInstance : IDisposable
         registration.Unregister(null);
         showSignal.Dispose();
         mutex.Dispose();
+    }
+
+    private static SecurityIdentifier CurrentUser()
+    {
+        using var identity = WindowsIdentity.GetCurrent();
+        return identity.User!;
     }
 
     private static string BuildName()

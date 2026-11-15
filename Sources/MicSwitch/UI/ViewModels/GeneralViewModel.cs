@@ -13,10 +13,14 @@ internal sealed partial class GeneralViewModel : ObservableObject
     private readonly SettingsStore settings;
     private readonly StartupService startup;
     private readonly UpdateService updates;
+    private readonly AppLifetime lifetime;
     private bool syncing;
 
     [ObservableProperty]
     private bool runAtStartup;
+
+    [ObservableProperty]
+    private bool runAsAdministrator;
 
     [ObservableProperty]
     private bool startMinimized;
@@ -36,12 +40,13 @@ internal sealed partial class GeneralViewModel : ObservableObject
     [ObservableProperty]
     private bool canCheckForUpdates = true;
 
-    public GeneralViewModel(AppState state, SettingsStore settings, StartupService startup, UpdateService updates)
+    public GeneralViewModel(AppState state, SettingsStore settings, StartupService startup, UpdateService updates, AppLifetime lifetime)
     {
         this.state = state;
         this.settings = settings;
         this.startup = startup;
         this.updates = updates;
+        this.lifetime = lifetime;
         updates.StatusChanged += () => Application.Current?.Dispatcher.BeginInvoke(SyncUpdateStatus);
         state.SettingsChanged += Sync;
         Sync();
@@ -52,6 +57,8 @@ internal sealed partial class GeneralViewModel : ObservableObject
 
     public bool UpdatesSupported => updates.IsSupported;
 
+    public bool CanRunAsAdministrator => ElevatedStart.IsSupported;
+
     public string UpstreamUrl => AppInfo.UpstreamUrl;
 
     private void Sync()
@@ -61,6 +68,7 @@ internal sealed partial class GeneralViewModel : ObservableObject
         try
         {
             RunAtStartup = startup.IsEnabled;
+            RunAsAdministrator = ElevatedStart.IsEnabled(current);
             StartMinimized = current.StartMinimized;
             CloseToTray = current.CloseToTray;
             CheckForUpdates = current.CheckForUpdates;
@@ -116,6 +124,36 @@ internal sealed partial class GeneralViewModel : ObservableObject
         {
             startup.SetEnabled(value);
             Sync();
+        }
+    }
+
+    partial void OnRunAsAdministratorChanged(bool value)
+    {
+        if (!syncing)
+        {
+            _ = SetRunAsAdministrator(value);
+        }
+    }
+
+    private async Task SetRunAsAdministrator(bool value)
+    {
+        // Off the UI thread: this waits for the Windows administrator prompt.
+        var done = await Task.Run(() => value ? ElevatedStart.Register() : ElevatedStart.Unregister());
+        if (done)
+        {
+            settings.Update(s => s.General.ElevatedExecutable = value ? Environment.ProcessPath : null);
+        }
+
+        Sync();
+
+        // Turning it on only helps once this copy is replaced by an elevated one.
+        if (done && value && !ElevatedStart.IsElevated)
+        {
+            settings.Flush();
+            if (ElevatedStart.Run())
+            {
+                lifetime.Exit();
+            }
         }
     }
 

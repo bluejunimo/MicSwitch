@@ -16,7 +16,7 @@ This is a rebuild of [MicSwitch by Xab3r](https://github.com/iXab3r/MicSwitch), 
 - A microphone is found again after it is unplugged, moved to another USB port, or renumbered by a Windows update.
 - Sounds no longer pile up when the hotkey is pressed many times quickly; the newest sound replaces the one playing.
 - The sound output list shows the real devices and remembers the choice.
-- It runs without administrator rights. The one consequence: hotkeys don't work while a program running as administrator has focus.
+- It runs without administrator rights by default. Hotkeys then don't work while a program running as administrator has focus; **General > Run as administrator** changes that. Windows asks once, when you turn it on.
 - It no longer depends on the PoeEye library or on git submodules.
 
 ## Install
@@ -25,6 +25,7 @@ Download `MicSwitch-win-Setup.exe` from the releases page of this repository. In
 ### Coming from MicSwitch 1.x
 1. Exit the old MicSwitch (tray icon, Exit) and run the new one once. It imports your microphone, hotkeys, sounds and overlay settings.
 2. Uninstall the old version. Until you do, both will react to the same hotkey.
+3. If Task Scheduler still lists a task named `MicSwitch` afterwards, delete it. Version 1.x used it to start at sign-in.
 
 Settings live in `%APPDATA%\MicSwitch\settings.json`, logs in `%APPDATA%\MicSwitch\logs`.
 

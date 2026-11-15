@@ -13,6 +13,18 @@
             <ui:ToggleSwitch AutomationProperties.Name="Run at startup" IsChecked="{Binding RunAtStartup}" />
         </ui:CardControl>
 
+        <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon Shield24}">
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <ui:TextBlock Text="Run as administrator" />
+                    <ui:TextBlock Style="{StaticResource CardDescription}" Text="Hotkeys also work in apps that run as administrator." />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ui:ToggleSwitch AutomationProperties.Name="Run as administrator"
+                             IsChecked="{Binding RunAsAdministrator}"
+                             IsEnabled="{Binding CanRunAsAdministrator}" />
+        </ui:CardControl>
+
         <ui:CardControl Margin="0,0,0,4"
                         Header="Start minimized"
                         Icon="{ui:SymbolIcon ArrowMinimize24}">
