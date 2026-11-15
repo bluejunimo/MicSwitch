@@ -42,8 +42,12 @@ internal sealed class TrayIconService : IDisposable
         state.SettingsChanged += Update;
         SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
 
+        // Windows keeps the tooltip an icon is created with as its name (screen readers announce it
+        // before the current tooltip), so the icon is created as "MicSwitch" and given its status after.
         Update();
+        tray.ToolTipText = AppInfo.Name;
         tray.ForceCreate(enablesEfficiencyMode: false);
+        Update();
     }
 
     public void Dispose()

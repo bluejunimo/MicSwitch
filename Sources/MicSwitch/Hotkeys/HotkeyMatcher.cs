@@ -50,8 +50,14 @@ internal sealed class HotkeyMatcher
     }
 
     /// <summary>Returns true when the key event should be hidden from other applications.</summary>
-    public bool OnKey(int virtualKey, bool isDown, HotkeyModifiers heldModifiers, Action<HotkeyBinding, bool> emit) =>
-        Process(virtualKey, MouseKey.None, isDown, heldModifiers & ~HotkeyGesture.ModifierOf(virtualKey), emit);
+    public bool OnKey(int virtualKey, bool isDown, HotkeyModifiers heldModifiers, Action<HotkeyBinding, bool> emit)
+    {
+        var ownModifier = HotkeyGesture.ModifierOf(virtualKey);
+        var suppress = Process(virtualKey, MouseKey.None, isDown, heldModifiers & ~ownModifier, emit);
+
+        // Swallowing Ctrl, Alt, Shift or Win would break every shortcut that uses them.
+        return suppress && ownModifier == HotkeyModifiers.None;
+    }
 
     /// <summary>Returns true when the button event should be hidden from other applications.</summary>
     public bool OnMouse(MouseKey button, bool isDown, HotkeyModifiers heldModifiers, Action<HotkeyBinding, bool> emit)

@@ -125,9 +125,10 @@ public class HotkeyMatcherTests
         matcher.SetBindings([Binding("LeftCtrl")]);
 
         // Windows reports Ctrl as held while the Ctrl key itself repeats.
-        Assert.True(matcher.OnKey(LeftCtrl, true, HotkeyModifiers.None, Emit));
-        Assert.True(matcher.OnKey(LeftCtrl, true, HotkeyModifiers.Ctrl, Emit));
-        Assert.True(matcher.OnKey(LeftCtrl, false, HotkeyModifiers.Ctrl, Emit));
+        // The key is never swallowed, even with "block" on: Ctrl+C and friends must keep working.
+        Assert.False(matcher.OnKey(LeftCtrl, true, HotkeyModifiers.None, Emit));
+        Assert.False(matcher.OnKey(LeftCtrl, true, HotkeyModifiers.Ctrl, Emit));
+        Assert.False(matcher.OnKey(LeftCtrl, false, HotkeyModifiers.Ctrl, Emit));
 
         Assert.Equal([(HotkeyAction.MicMain, true), (HotkeyAction.MicMain, false)], events);
     }
