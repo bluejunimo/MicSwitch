@@ -120,7 +120,8 @@ public partial class App
             instance.ShowRequested += () => Dispatcher.BeginInvoke(ShowMainWindow);
         }
 
-        if (!settings.Current.General.StartMinimized)
+        // Right after installing, a window that never appears looks like a failed install.
+        if (!settings.Current.General.StartMinimized || Program.JustInstalled)
         {
             ShowMainWindow();
         }

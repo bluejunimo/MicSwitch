@@ -108,7 +108,7 @@ public class LegacySettingsImporterTests : IDisposable
         Assert.Equal("Ctrl+Up", settings.Speakers.VolumeUpHotkey.Key);
         Assert.False(settings.Speakers.VolumeUpHotkey.Suppress);
 
-        Assert.True(settings.General.StartMinimized);
+        Assert.False(settings.General.StartMinimized);
         Assert.True(settings.General.CloseToTray);
     }
 

@@ -70,7 +70,8 @@ internal static partial class LegacySettingsImporter
 
     private static void ImportMain(JsonElement value, AppSettings result)
     {
-        result.General.StartMinimized = Bool(value, "StartMinimized") ?? false;
+        // "StartMinimized" is not carried over: 1.x had it on by default, and a first start of version 2
+        // that shows nothing looks broken. Off is the default.
         result.General.CloseToTray = Bool(value, "MinimizeOnClose") ?? true;
         result.Microphone.Device = Device(value, "MicrophoneLineId") ?? DeviceSelection.All;
         result.Microphone.RestoreVolume = Bool(value, "VolumeControlEnabled") ?? false;

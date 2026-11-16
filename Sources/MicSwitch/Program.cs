@@ -7,11 +7,14 @@ namespace MicSwitch;
 
 internal static class Program
 {
+    /// <summary>This is the start the installer makes right after installing.</summary>
+    public static bool JustInstalled { get; private set; }
+
     [STAThread]
     private static void Main(string[] args)
     {
         // Must come first: the installer and updater start the app with special arguments and expect it to exit quickly.
-        VelopackApp.Build().Run();
+        VelopackApp.Build().OnFirstRun(_ => JustInstalled = true).Run();
 
         // A copy started by the elevated task takes over from the one that started it, which is still exiting.
         var startedByTask = ElevatedStart.StartedByTask(args);
