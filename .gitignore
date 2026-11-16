@@ -229,3 +229,6 @@ Sources/PoeShared
 
 /Sources/WindowsHook*
 *_wpftmp.csproj
+Submodules/gong-wpf-dragdrop
+Submodules/PoeEye
+Submodules/PropertyBinder
