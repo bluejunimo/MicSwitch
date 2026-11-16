@@ -1,0 +1,156 @@
+<Page x:Class="MicSwitch.UI.Pages.GeneralPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      x:ClassModifier="internal"
+      Title="General">
+    <StackPanel Margin="0,0,0,24">
+        <ui:CardControl Margin="0,0,0,4"
+                        Header="Run at startup"
+                        Icon="{ui:SymbolIcon Power24}">
+            <ui:ToggleSwitch AutomationProperties.Name="Run at startup" IsChecked="{Binding RunAtStartup}" />
+        </ui:CardControl>
+
+        <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon Shield24}">
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <ui:TextBlock Text="Run as administrator" />
+                    <ui:TextBlock Style="{StaticResource CardDescription}" Text="Hotkeys also work in apps that run as administrator." />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ui:ToggleSwitch AutomationProperties.Name="Run as administrator"
+                             IsChecked="{Binding RunAsAdministrator}"
+                             IsEnabled="{Binding CanRunAsAdministrator}" />
+        </ui:CardControl>
+
+        <ui:CardControl Margin="0,0,0,4"
+                        Header="Start minimized"
+                        Icon="{ui:SymbolIcon ArrowMinimize24}">
+            <ui:ToggleSwitch AutomationProperties.Name="Start minimized" IsChecked="{Binding StartMinimized}" />
+        </ui:CardControl>
+
+        <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon Dismiss24}">
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <ui:TextBlock Text="Close to tray" />
+                    <ui:TextBlock Style="{StaticResource CardDescription}" Text="Closing the window keeps MicSwitch running." />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ui:ToggleSwitch AutomationProperties.Name="Close to tray" IsChecked="{Binding CloseToTray}" />
+        </ui:CardControl>
+
+        <ui:CardControl Margin="0,0,0,4"
+                        Header="App theme"
+                        Icon="{ui:SymbolIcon DarkTheme24}">
+            <ComboBox MinWidth="180"
+                      AutomationProperties.Name="App theme"
+                      DisplayMemberPath="Label"
+                      ItemsSource="{Binding Themes}"
+                      SelectedValue="{Binding Theme}"
+                      SelectedValuePath="Value" />
+        </ui:CardControl>
+
+        <ui:TextBlock Style="{StaticResource SectionHeader}" Text="Microphone on startup" />
+
+        <ui:CardControl Margin="0,0,0,4"
+                        Icon="{ui:SymbolIcon MicOff24}"
+                        IsEnabled="{Binding IsStartupStateEnabled}">
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <ui:TextBlock Text="Mute state" />
+                    <ui:TextBlock Style="{StaticResource CardDescription}" Text="Push-to-talk and push-to-mute set this themselves." />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ComboBox MinWidth="180"
+                      AutomationProperties.Name="Microphone mute state on startup"
+                      DisplayMemberPath="Label"
+                      ItemsSource="{Binding StartupStates}"
+                      SelectedValue="{Binding StartupState}"
+                      SelectedValuePath="Value" />
+        </ui:CardControl>
+
+        <ui:CardControl Margin="0,0,0,4"
+                        Header="Restore input volume"
+                        Icon="{ui:SymbolIcon ArrowCounterclockwise24}">
+            <ui:ToggleSwitch AutomationProperties.Name="Restore microphone input volume" IsChecked="{Binding RestoreVolume}" />
+        </ui:CardControl>
+
+        <ui:TextBlock Style="{StaticResource SectionHeader}" Text="Speakers on startup" />
+
+        <ui:CardControl Margin="0,0,0,4"
+                        Icon="{ui:SymbolIcon SpeakerMute24}"
+                        IsEnabled="{Binding IsSpeakerStartupStateEnabled}">
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <ui:TextBlock Text="Mute state" />
+                    <ui:TextBlock Style="{StaticResource CardDescription}" Text="The hold-to-unmute and hold-to-mute modes set this themselves." />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ComboBox MinWidth="180"
+                      AutomationProperties.Name="Speaker mute state on startup"
+                      DisplayMemberPath="Label"
+                      ItemsSource="{Binding StartupStates}"
+                      SelectedValue="{Binding SpeakerStartupState}"
+                      SelectedValuePath="Value" />
+        </ui:CardControl>
+
+        <ui:CardControl Margin="0,0,0,4"
+                        Header="Restore volume"
+                        Icon="{ui:SymbolIcon ArrowCounterclockwise24}">
+            <ui:ToggleSwitch AutomationProperties.Name="Restore speaker volume" IsChecked="{Binding RestoreSpeakerVolume}" />
+        </ui:CardControl>
+
+        <ui:TextBlock Style="{StaticResource SectionHeader}" Text="Updates" />
+
+        <ui:CardControl Margin="0,0,0,4"
+                        Icon="{ui:SymbolIcon ArrowSync24}"
+                        IsEnabled="{Binding Updates.IsSupported}">
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <ui:TextBlock Text="Update automatically" />
+                    <ui:TextBlock Style="{StaticResource CardDescription}" Text="Downloads new versions in the background. Off: only when you check." />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ui:ToggleSwitch AutomationProperties.Name="Update automatically" IsChecked="{Binding CheckForUpdates}" />
+        </ui:CardControl>
+
+        <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon ArrowDownload24}">
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <ui:TextBlock Text="{Binding Version, StringFormat=Version {0}}" />
+                    <ui:TextBlock Style="{StaticResource CardDescription}" Text="{Binding Updates.StatusText}" />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <Grid>
+                <!-- The same button, plain while there is nothing to install and accented when there is. -->
+                <ui:Button Command="{Binding Updates.ActCommand}"
+                           Content="{Binding Updates.ActionText}"
+                           IsEnabled="{Binding Updates.CanAct}"
+                           Visibility="{Binding Updates.IsUpdateOffered, Converter={StaticResource VisibleWhenFalse}}" />
+                <ui:Button Appearance="Primary"
+                           Command="{Binding Updates.ActCommand}"
+                           Content="{Binding Updates.ActionText}"
+                           IsEnabled="{Binding Updates.CanAct}"
+                           Visibility="{Binding Updates.IsUpdateOffered, Converter={StaticResource VisibleWhenTrue}}" />
+            </Grid>
+        </ui:CardControl>
+
+        <ui:TextBlock Style="{StaticResource SectionHeader}" Text="About" />
+
+        <ui:CardControl Margin="0,0,0,4"
+                        Header="Logs"
+                        Icon="{ui:SymbolIcon Folder24}">
+            <ui:Button Command="{Binding OpenLogsCommand}" Content="Open folder" />
+        </ui:CardControl>
+
+        <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon Info24}">
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <ui:TextBlock Text="{Binding Version, StringFormat=MicSwitch {0}}" />
+                    <ui:TextBlock Style="{StaticResource CardDescription}" Text="Based on MicSwitch by Xab3r." />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ui:Button Command="{Binding OpenUpstreamCommand}" Content="Original project" />
+        </ui:CardControl>
+    </StackPanel>
+</Page>

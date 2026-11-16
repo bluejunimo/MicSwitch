@@ -1,0 +1,97 @@
+<Page x:Class="MicSwitch.UI.Pages.OverlayPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      x:ClassModifier="internal"
+      Title="Overlay">
+    <StackPanel Margin="0,0,0,24">
+        <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon Eye24}">
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <ui:TextBlock Text="Show overlay" />
+                    <ui:TextBlock Style="{StaticResource CardDescription}" Text="{Binding Description}" />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ComboBox MinWidth="160"
+                      AutomationProperties.Name="Show overlay"
+                      DisplayMemberPath="Label"
+                      ItemsSource="{Binding Visibilities}"
+                      SelectedValue="{Binding Visibility}"
+                      SelectedValuePath="Value" />
+        </ui:CardControl>
+
+        <ui:CardControl Margin="0,0,0,4"
+                        Header="Opacity"
+                        Icon="{ui:SymbolIcon CircleHalfFill24}"
+                        IsEnabled="{Binding IsShown}">
+            <StackPanel Orientation="Horizontal">
+                <Slider Width="220"
+                        VerticalAlignment="Center"
+                        AutomationProperties.Name="Overlay opacity"
+                        Maximum="100"
+                        Minimum="10"
+                        Value="{Binding Opacity}" />
+                <TextBlock Style="{StaticResource PercentLabel}" Text="{Binding Opacity, StringFormat={}{0:0}%}" />
+            </StackPanel>
+        </ui:CardControl>
+
+        <ui:CardControl Margin="0,0,0,4"
+                        Icon="{ui:SymbolIcon ArrowMove24}"
+                        IsEnabled="{Binding IsShown}">
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <ui:TextBlock Text="Move and resize" />
+                    <ui:TextBlock Style="{StaticResource CardDescription}" Text="Drag the overlay, or its corner to resize. Turn off when done." />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <StackPanel Orientation="Horizontal">
+                <ui:Button Margin="0,0,16,0"
+                           AutomationProperties.Name="Reset position and size"
+                           Command="{Binding ResetPositionCommand}"
+                           Content="Reset"
+                           ToolTip="Back to the default position and size" />
+                <ui:ToggleSwitch AutomationProperties.Name="Move and resize" IsChecked="{Binding IsUnlocked}" />
+            </StackPanel>
+        </ui:CardControl>
+
+        <ui:TextBlock Style="{StaticResource SectionHeader}" Text="Icons" />
+
+        <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon Image24}">
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <ui:TextBlock Text="Custom icons" />
+                    <ui:TextBlock Style="{StaticResource CardDescription}" Text="{Binding IconsDescription}" />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <StackPanel Orientation="Horizontal">
+                <ui:Button Padding="4"
+                           Appearance="Transparent"
+                           AutomationProperties.Name="Icon when on"
+                           BorderThickness="0"
+                           Command="{Binding ChooseMicIconCommand}"
+                           ToolTip="Icon when on. Click to choose an image.">
+                    <Image Width="32"
+                           Height="32"
+                           Source="{Binding MicIcon}" />
+                </ui:Button>
+                <ui:Button Margin="4,0,0,0"
+                           Padding="4"
+                           Appearance="Transparent"
+                           AutomationProperties.Name="Icon when muted"
+                           BorderThickness="0"
+                           Command="{Binding ChooseMutedIconCommand}"
+                           ToolTip="Icon when muted. Click to choose an image.">
+                    <Image Width="32"
+                           Height="32"
+                           Source="{Binding MutedIcon}" />
+                </ui:Button>
+                <ui:Button Margin="12,0,0,0"
+                           AutomationProperties.Name="Reset icons"
+                           Command="{Binding ResetIconsCommand}"
+                           Content="Reset"
+                           ToolTip="Back to the built-in icons"
+                           IsEnabled="{Binding HasCustomIcons}" />
+            </StackPanel>
+        </ui:CardControl>
+    </StackPanel>
+</Page>

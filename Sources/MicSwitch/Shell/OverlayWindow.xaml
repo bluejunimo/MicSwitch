@@ -1,0 +1,67 @@
+<Window x:Class="MicSwitch.Shell.OverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        x:ClassModifier="internal"
+        Title="MicSwitch overlay"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        Focusable="False"
+        Topmost="True"
+        Width="96"
+        Height="96">
+    <Grid>
+        <!-- Shown only while the overlay is unlocked for moving and resizing. -->
+        <Border x:Name="EditFrame"
+                Visibility="Collapsed"
+                Background="#66000000"
+                BorderBrush="{DynamicResource SystemAccentColorSecondaryBrush}"
+                BorderThickness="2"
+                CornerRadius="8"
+                Cursor="SizeAll"
+                ToolTip="Drag to move. Double-click to lock." />
+
+        <Image x:Name="MicImage"
+               Margin="4"
+               IsHitTestVisible="False"
+               RenderOptions.BitmapScalingMode="HighQuality"
+               Stretch="Uniform" />
+
+        <Viewbox x:Name="VolumeIndicator"
+                 Margin="4"
+                 IsHitTestVisible="False"
+                 Visibility="Collapsed">
+            <Grid Width="64" Height="64">
+                <Ellipse Fill="#D8202020" />
+                <ui:ProgressRing x:Name="VolumeRing"
+                                 Width="56"
+                                 Height="56"
+                                 IsIndeterminate="False" />
+                <ui:SymbolIcon x:Name="VolumeIcon"
+                               FontSize="24"
+                               Foreground="White"
+                               Symbol="Speaker224" />
+            </Grid>
+        </Viewbox>
+
+        <Thumb x:Name="ResizeGrip"
+               Width="16"
+               Height="16"
+               HorizontalAlignment="Right"
+               VerticalAlignment="Bottom"
+               Cursor="SizeNWSE"
+               DragCompleted="OnResizeCompleted"
+               DragDelta="OnResizeDelta"
+               Visibility="Collapsed">
+            <Thumb.Template>
+                <ControlTemplate TargetType="Thumb">
+                    <Border Background="{DynamicResource SystemAccentColorSecondaryBrush}" CornerRadius="8,0,6,0" />
+                </ControlTemplate>
+            </Thumb.Template>
+        </Thumb>
+    </Grid>
+</Window>

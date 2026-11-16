@@ -1,0 +1,115 @@
+<Page x:Class="MicSwitch.UI.Pages.SoundsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:vm="clr-namespace:MicSwitch.UI.ViewModels"
+      x:ClassModifier="internal"
+      Title="Sounds">
+    <Page.Resources>
+        <!-- A sound in the drop-down. The user's own sounds get a remove button, shown in the open list only;
+             the last entry adds a file. -->
+        <DataTemplate x:Key="SoundOptionTemplate" DataType="{x:Type vm:SoundOption}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:SymbolIcon x:Name="AddIcon"
+                               Margin="0,0,8,0"
+                               Symbol="Add16"
+                               Visibility="Collapsed" />
+                <TextBlock Grid.Column="1"
+                           VerticalAlignment="Center"
+                           Text="{Binding Label}"
+                           TextTrimming="CharacterEllipsis" />
+                <ui:Button x:Name="RemoveButton"
+                           Grid.Column="2"
+                           Margin="16,-4,-4,-4"
+                           Padding="5"
+                           Appearance="Transparent"
+                           AutomationProperties.Name="{Binding Label, StringFormat=Remove {0}}"
+                           BorderThickness="0"
+                           Command="{Binding DataContext.RemoveSoundCommand, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                           CommandParameter="{Binding}"
+                           Icon="{ui:SymbolIcon Delete16}"
+                           ToolTip="{Binding Label, StringFormat=Remove {0}}"
+                           Visibility="Collapsed" />
+            </Grid>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding IsAddAction}" Value="True">
+                    <Setter TargetName="AddIcon" Property="Visibility" Value="Visible" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding CanRemove}" Value="True">
+                    <Setter TargetName="RemoveButton" Property="Visibility" Value="Visible" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ComboBoxItem}}" Value="{x:Null}">
+                    <Setter TargetName="RemoveButton" Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+    </Page.Resources>
+
+    <StackPanel Margin="0,0,0,24">
+        <ui:CardControl Margin="0,0,0,4" Header="When muted">
+            <ui:CardControl.Icon>
+                <ui:SymbolIcon Symbol="{Binding MutedSymbol}" />
+            </ui:CardControl.Icon>
+            <StackPanel Orientation="Horizontal">
+                <ComboBox Width="240"
+                          AutomationProperties.Name="Sound when muted"
+                          ItemTemplate="{StaticResource SoundOptionTemplate}"
+                          ItemsSource="{Binding Sounds}"
+                          SelectedItem="{Binding MuteSound}" />
+                <ui:Button Margin="8,0,0,0"
+                           AutomationProperties.Name="Play mute sound"
+                           Command="{Binding PlayMuteSoundCommand}"
+                           Icon="{ui:SymbolIcon Play24}"
+                           ToolTip="Play the mute sound" />
+            </StackPanel>
+        </ui:CardControl>
+
+        <ui:CardControl Margin="0,0,0,4" Header="When unmuted">
+            <ui:CardControl.Icon>
+                <ui:SymbolIcon Symbol="{Binding LiveSymbol}" />
+            </ui:CardControl.Icon>
+            <StackPanel Orientation="Horizontal">
+                <ComboBox Width="240"
+                          AutomationProperties.Name="Sound when unmuted"
+                          ItemTemplate="{StaticResource SoundOptionTemplate}"
+                          ItemsSource="{Binding Sounds}"
+                          SelectedItem="{Binding UnmuteSound}" />
+                <ui:Button Margin="8,0,0,0"
+                           AutomationProperties.Name="Play unmute sound"
+                           Command="{Binding PlayUnmuteSoundCommand}"
+                           Icon="{ui:SymbolIcon Play24}"
+                           ToolTip="Play the unmute sound" />
+            </StackPanel>
+        </ui:CardControl>
+
+        <ui:CardControl Margin="0,0,0,4"
+                        Header="Output device"
+                        Icon="{ui:SymbolIcon Headphones24}">
+            <ComboBox Width="290"
+                      AutomationProperties.Name="Output device"
+                      ItemsSource="{Binding Outputs}"
+                      SelectedItem="{Binding SelectedOutput}" />
+        </ui:CardControl>
+        
+        <ui:CardControl Margin="0,0,0,4"
+                        Header="Volume"
+                        Icon="{ui:SymbolIcon Speaker224}">
+            <StackPanel Orientation="Horizontal">
+                <Slider Width="220"
+                        VerticalAlignment="Center"
+                        AutomationProperties.Name="Sound volume"
+                        Maximum="100"
+                        Minimum="0"
+                        Value="{Binding Volume}" />
+                <TextBlock Style="{StaticResource PercentLabel}" Text="{Binding Volume, StringFormat={}{0:0}%}" />
+            </StackPanel>
+        </ui:CardControl>
+
+        
+    </StackPanel>
+</Page>

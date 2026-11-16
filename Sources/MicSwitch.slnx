@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="MicSwitch.Tests/MicSwitch.Tests.csproj" />
+  <Project Path="MicSwitch/MicSwitch.csproj" />
+</Solution>
